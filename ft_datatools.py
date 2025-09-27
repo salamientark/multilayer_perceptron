@@ -3,6 +3,9 @@ import pandas as pd
 import ft_math as ftm
 
 
+###############################################################################
+#                               DATA ANALYSIS                                 #
+###############################################################################
 def print_describe_result(
         features: list,
         counts: list,
@@ -126,7 +129,7 @@ def ft_describe(df: pd.DataFrame, exclude: list = []):
     q3s, maxs = [], []
     skewness, kurtosis, variance = [], [], []
     for feature in features:
-        col = filter_col(df[feature])
+        col = remove_nan(df[feature])
         size = len(col)
         counts.append(size)
         means.append(ftm.ft_mean(col, count=size))
@@ -145,41 +148,20 @@ def ft_describe(df: pd.DataFrame, exclude: list = []):
                           maxs, variance, skewness, kurtosis)
 
 
-def score_function(thetas: np.ndarray, features: np.ndarray) -> float:
-    """Calculate score function for one sample
-    thetas and features has to be the same size
+###############################################################################
+#                              DATA TREATMENT                                 #
+###############################################################################
+def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
+    """Select only the specified columns from the dataframe.
 
     Parameters:
-      thetas (np.ndarray): Thetas values
-      features (np.ndarray): Features values
+      df (pd.DataFrame): Dataframe.
+      features (list): List of numerical features name.
 
     Returns:
-      np.ndarray: Score value
+      pd.DataFrame: Dataframe with only the specified columns.
     """
-    tmp_theta = thetas
-    if thetas.shape != features.shape:
-        tmp_theta = thetas.reshape(-1, 1)
-    return np.dot(features, tmp_theta)
-
-
-def sigmoid(
-        thetas: np.ndarray,
-        features: np.ndarray,
-        value: float | None = None
-        ) -> float:
-    """Calculate sigmoid function for one sample
-
-    Parameters:
-      thetas (np.ndarray): Thetas values for score function
-      features (np.ndarray): Features values for score function
-      value (float | None): If value is given, calculate sigmoid for this
-                       value instead of score function
-
-    Returns:
-      np.ndarray: Sigmoid value
-    """
-    val = value if value is not None else score_function(thetas, features)
-    return 1 / (1 + np.exp(-val))
+    return df[features]
 
 
 def get_numerical_features(
@@ -232,7 +214,21 @@ def get_class_list(df: pd.DataFrame, col: str) -> list:
         raise Exception(f"Column '{col}' not found in the dataframe.") from e
 
 
-def filter_col(col: np.ndarray) -> np.ndarray:
+def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
+    """Convert class names to numerical values
+
+    Parameters:
+    class_name (str): Class name
+    data (pd.Series): Series with class names
+
+    Returns:
+    pd.Series: Series with numerical values
+    """
+    converted_col = (data == class_name).astype(int)
+    return converted_col.astype(int)
+
+
+def remove_nan(col: np.ndarray) -> np.ndarray:
     """Filter a column to keep only numerical values.
 
     Parameters:
@@ -243,6 +239,32 @@ def filter_col(col: np.ndarray) -> np.ndarray:
     """
     col = np.array(col)
     return col[~pd.isna(col)]
+
+
+def replace_nan(
+        df: pd.DataFrame,
+        columns: list = [],
+        func=None
+        ) -> pd.DataFrame:
+    """Replace NaN values in a dataframe with the mean of the column
+
+    Parameters:
+      df (pd.DataFrame): Dataframe to process
+      columns (list) (optionnal): List of columns to use of specified
+    func (function) (optionnal): Function to use to compute the
+            missing values. If None is provided the mean will be used.
+
+    Returns:
+      pd.DataFrame: Dataframe with NaN values replaced
+    """
+    new_df = df.copy()
+    f = func if func is not None else ftm.ft_mean
+    cols = columns if columns != [] else new_df.columns
+    for column in cols:
+        tmp_col = remove_nan(new_df[column].tolist())
+        val = f(tmp_col)
+        new_df[column] = new_df[column].fillna(val)
+    return new_df
 
 
 def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
@@ -280,19 +302,6 @@ def classify(df: pd.DataFrame, target_col: str, features: list
     return res
 
 
-def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
-    """Select only the specified columns from the dataframe.
-
-    Parameters:
-      df (pd.DataFrame): Dataframe.
-      features (list): List of numerical features name.
-
-    Returns:
-      pd.DataFrame: Dataframe with only the specified columns.
-    """
-    return df[features]
-
-
 def standardize_array(array: np.ndarray,
                       mean: float | None = None,
                       std: float | None = None
@@ -310,7 +319,7 @@ def standardize_array(array: np.ndarray,
     """
     m = mean if mean is not None else ftm.ft_mean(array)
     s = std if std is not None else ftm.ft_std(array)
-    standardized = np.array(array.copy())
+    standardized = array.copy()
     standardized = (standardized - m) / s if s != 0 else np.zeros(len(array))
     return standardized
 
@@ -327,44 +336,21 @@ def standardize_df(df: pd.DataFrame, columns: list = []) -> pd.DataFrame:
       pd.DataFrame: Dataframe with standardized columns.
     """
     standardized_df = df.copy()
-    if not columns:
+    if columns is None or not columns:
         columns = get_numerical_features(standardized_df)
     for col in columns:
-        col_data = filter_col(standardized_df[col].tolist())
+        col_data = np.array(standardized_df[col].values)
         std = ftm.ft_std(col_data)
         if std == 0:
             standardized_df[col] = 0
         else:
-            standardized_df[col] = standardize_array(standardized_df[col])
+            standardized_df[col] = standardize_array(col_data, std=std)
     return standardized_df
 
 
-def replace_nan(
-        df: pd.DataFrame,
-        columns: list = [],
-        func=None
-        ) -> pd.DataFrame:
-    """Replace NaN values in a dataframe with the mean of the column
-
-    Parameters:
-      df (pd.DataFrame): Dataframe to process
-      columns (list) (optionnal): List of columns to use of specified
-    func (function) (optionnal): Function to use to compute the
-            missing values. If None is provided the mean will be used.
-
-    Returns:
-      pd.DataFrame: Dataframe with NaN values replaced
-    """
-    new_df = df.copy()
-    f = func if func is not None else ftm.ft_mean
-    cols = columns if columns != [] else new_df.columns
-    for column in cols:
-        tmp_col = filter_col(new_df[column].tolist())
-        val = f(tmp_col)
-        new_df[column] = new_df[column].fillna(val)
-    return new_df
-
-
+###############################################################################
+#                                 ALGORITHM                                   #
+###############################################################################
 def init_thetas(classes: list, feature_nbr: int) -> dict:
     """Initialize thetas dictionary with zeros
 
@@ -424,18 +410,41 @@ def save_thetas(thetas: dict, features: list) -> None:
             f.write(cls + "," + ",".join([str(t) for t in theta]) + "\n")
 
 
-def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
-    """Convert class names to numerical values
+def score_function(thetas: np.ndarray, features: np.ndarray) -> float:
+    """Calculate score function for one sample
+    thetas and features has to be the same size
 
     Parameters:
-    class_name (str): Class name
-    data (pd.Series): Series with class names
+      thetas (np.ndarray): Thetas values
+      features (np.ndarray): Features values
 
     Returns:
-    pd.Series: Series with numerical values
+      np.ndarray: Score value
     """
-    converted_col = (data == class_name).astype(int)
-    return converted_col.astype(int)
+    tmp_theta = thetas
+    if thetas.shape != features.shape:
+        tmp_theta = thetas.reshape(-1, 1)
+    return np.dot(features, tmp_theta)
+
+
+def sigmoid(
+        thetas: np.ndarray,
+        features: np.ndarray,
+        value: float | None = None
+        ) -> float:
+    """Calculate sigmoid function for one sample
+
+    Parameters:
+      thetas (np.ndarray): Thetas values for score function
+      features (np.ndarray): Features values for score function
+      value (float | None): If value is given, calculate sigmoid for this
+                       value instead of score function
+
+    Returns:
+      np.ndarray: Sigmoid value
+    """
+    val = value if value is not None else score_function(thetas, features)
+    return 1 / (1 + np.exp(-val))
 
 
 def batch_gradient_descent(thetas: np.ndarray,
