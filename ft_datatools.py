@@ -148,6 +148,18 @@ def ft_describe(df: pd.DataFrame, exclude: list = []):
                           maxs, variance, skewness, kurtosis)
 
 
+def ft_shape(df: pd.DataFrame) -> tuple[int, int]:
+    """Return dataframe shape
+
+    Parameters:
+      df (pandas.DataFrame): Dataframe
+
+    Return:
+      tuple[int, int] : (row_number, col_number)
+    """
+    return (len(df), len(df.columns))
+
+
 ###############################################################################
 #                              DATA TREATMENT                                 #
 ###############################################################################
@@ -408,6 +420,49 @@ def save_thetas(thetas: dict, features: list) -> None:
         f.write("Class,Bias," + ",".join(features) + "\n")
         for cls, theta in thetas.items():
             f.write(cls + "," + ",".join([str(t) for t in theta]) + "\n")
+
+
+def correlation_coefficient(
+        x: np.ndarray,
+        y: np.ndarray,
+        count: int | None = None
+        ) -> float:
+    """Calculate the correlation coefficient between two features
+
+    Parameters:
+      x (np.ndarray): First feature
+      y (np.ndarray): Second feature
+      count (int) (optional): number of observation
+    """
+    c = count if count is not None else len(x)
+    x_sum = np.sum(x)
+    y_sum = np.sum(y)
+    numerator = c * np.dot(x, y) - x_sum * y_sum
+    denominator = ((c * np.dot(x, x) - x_sum ** 2) * 
+                   (c * np.dot(y, y) - y_sum ** 2)) ** 0.5
+    return numerator / denominator if denominator != 0 else 0
+
+
+def correlation_matrix(df: pd.DataFrame) -> np.ndarray:
+    """Calculate the correlation matrix for the dataframe
+
+    Parameters:
+      df (pd.DataFrame): Dataframe containing numerical features
+    """
+    row_nbr, col_nbr = ft_shape(df)
+    corr_matrix = np.zeros((col_nbr, col_nbr))
+    for x in range(col_nbr):
+        x_feature = df.iloc[:, x]
+        for y in range(x + 1):
+            y_feature = df.iloc[:, y]
+            if x == y:
+                corr_matrix[x][y] = 1
+                continue
+            corr_coef = correlation_coefficient(x_feature, y_feature,
+                                                count=row_nbr)
+            corr_matrix[x][y] = corr_coef
+            corr_matrix[y][x] = corr_coef
+    return corr_matrix
 
 
 def score_function(thetas: np.ndarray, features: np.ndarray) -> float:
