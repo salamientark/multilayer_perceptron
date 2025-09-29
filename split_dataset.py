@@ -114,7 +114,6 @@ def main(args):
       --outfiles <str,str> or <str> <str>   Output files
     """
     try:
-        print(args)
         # Get Dataframe
         df = pd.read_csv(args.dataset_path)
         df.columns = data_columns_names
