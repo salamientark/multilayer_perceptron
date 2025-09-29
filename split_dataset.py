@@ -120,9 +120,8 @@ def main(ac: int, av: list):
 
         # Splitting
         train_set = df.sample(frac=options['ratio'],
-                              random_state=options['seed']
-                              ).reset_index(drop=True)
-        validation_set = df[~df['id'].isin(train_set['id'])]
+                              random_state=options['seed'])
+        validation_set = df.drop(train_set.index)
 
         # Wrinting to file
         train_set.to_csv("data_training.csv", index=False)
