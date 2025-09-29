@@ -438,7 +438,7 @@ def correlation_coefficient(
     x_sum = np.sum(x)
     y_sum = np.sum(y)
     numerator = c * np.dot(x, y) - x_sum * y_sum
-    denominator = ((c * np.dot(x, x) - x_sum ** 2) * 
+    denominator = ((c * np.dot(x, x) - x_sum ** 2) *
                    (c * np.dot(y, y) - y_sum ** 2)) ** 0.5
     return numerator / denominator if denominator != 0 else 0
 

@@ -14,3 +14,6 @@ redundancy and predictive power
 
 #### Splitting dataset
 
+- We devide the dataset into two parts (train_dataset, test_dataset).
+We'll use a optionnal argument that will be the seed of the dataset shuffle.
+Those will allow to reproduce same splitting.
