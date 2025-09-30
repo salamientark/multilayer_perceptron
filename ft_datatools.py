@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import ft_math as ftm
+from random import seed, randrange
+from sys import maxsize
 
 
 ###############################################################################
@@ -398,6 +400,16 @@ def split_dataset(df: pd.DataFrame,
 ###############################################################################
 #                                 ALGORITHM                                   #
 ###############################################################################
+def get_random_seed() -> int:
+    """Generate a random positive int as seed
+
+    Returns:
+      int: Generated seed
+    """
+    seed()
+    return randrange(1, maxsize)
+
+
 def init_thetas(classes: list, feature_nbr: int) -> dict:
     """Initialize thetas dictionary with zeros
 
