@@ -1,5 +1,6 @@
 import argparse as ap
 import pandas as pd
+from ft_datatools import split_dataset
 
 
 # Data columns name
@@ -111,19 +112,17 @@ def main(args):
       --outfiles <str,str> or <str> <str>   Output files
     """
     try:
-        print(args.outfile)
         # Get Dataframe
         df = pd.read_csv(args.dataset_path)
         df.columns = data_columns_names
 
         # Splitting
-        train_set = df.sample(frac=args.train_ratio,
-                              random_state=args.seed)
-        validation_set = df.drop(train_set.index)
+        train_set, test_set = split_dataset(df, ratio=args.train_ratio,
+                                            seed=args.seed)
 
-        # Wrinting to file
+        # Writing to file
         train_set.to_csv(args.outfile[0], index=False)
-        validation_set.to_csv(args.outfile[1], index=False)
+        test_set.to_csv(args.outfile[1], index=False)
     except Exception as e:
         print(f"{RED}Error{RESET}: {e}")
 

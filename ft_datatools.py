@@ -240,6 +240,23 @@ def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
     return converted_col.astype(int)
 
 
+def one_encoding(df: pd.DataFrame, col: str) -> pd.DataFrame:
+    """Convert a column of class names to numerical values using one encoding
+
+    Parameters:
+      df (pd.DataFrame): Dataframe.
+      col (str): Column name to convert.
+
+    Returns:
+      np.ndarray[int]: Array of numerical values.
+    """
+    class_list = get_class_list(df, col)
+    one_encoded_val = {}
+    for i, c in enumerate(class_list):
+        one_encoded_val[c] = [int(val == c) for val in class_list]
+    return df[col].map(one_encoded_val)
+
+
 def remove_nan(col: np.ndarray) -> np.ndarray:
     """Filter a column to keep only numerical values.
 
@@ -360,6 +377,24 @@ def standardize_df(df: pd.DataFrame, columns: list = []) -> pd.DataFrame:
     return standardized_df
 
 
+def split_dataset(df: pd.DataFrame,
+                  ratio: float = 0.8,
+                  seed: int = 1
+                  ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split dataframe into multiple dataframes according to the given ratio
+
+    Parameters:
+    df (pd.DataFrame): Dataframe to split
+    ratio (float): Ratio for split
+    seed (int): random seed
+
+    Returns:
+      tuple[pandas.DataFrame, pandas.DataFrame): Tuple of dataframes
+    """
+    x = df.sample(frac=ratio, random_state=seed)
+    return (x, df.drop(x.index))
+
+
 ###############################################################################
 #                                 ALGORITHM                                   #
 ###############################################################################
@@ -367,13 +402,29 @@ def init_thetas(classes: list, feature_nbr: int) -> dict:
     """Initialize thetas dictionary with zeros
 
     Parameters:
-    classes (list): List of class names
-    feature_nbr (int): Number of features
+      classes (list): List of class names
+      feature_nbr (int): Number of features
+
+    Returns:
+      (dict): theta parameters for each class
     """
-    thetas = {}
-    for elem in classes:
-        thetas[elem] = np.zeros(feature_nbr)
+    thetas = {cls: np.zeros(feature_nbr) for cls in classes}
+    # for elem in classes:
+    #     thetas[elem] = np.zeros(feature_nbr)
     return thetas
+
+
+def init_weights_zero(features: int, output: int) -> np.ndarray:
+    """Initialize a weight matrix with zeros
+
+    Parameters:
+      feature (int): Number of features
+      output (int): Number of outputs (next layer neurons nbr)
+
+    Returns:
+      np.ndarray: Weight matrix
+    """
+    return np.zeros((features, output))
 
 
 def unstandardized_thetas(
@@ -465,41 +516,49 @@ def correlation_matrix(df: pd.DataFrame) -> np.ndarray:
     return corr_matrix
 
 
-def score_function(thetas: np.ndarray, features: np.ndarray) -> float:
+def score_function(weights: np.ndarray,
+                   features: np.ndarray,
+                   bias: np.ndarray | float | None = None
+                   ) -> np.ndarray | float:
     """Calculate score function for one sample
     thetas and features has to be the same size
 
     Parameters:
-      thetas (np.ndarray): Thetas values
+      weights (np.ndarray): Weights values
       features (np.ndarray): Features values
+      bias (np.ndarray) (optionnal): Used if specified instead of feature
+                                     first col
 
     Returns:
-      np.ndarray: Score value
+      np.ndarray | float: Score value array | Score value
     """
-    tmp_theta = thetas
-    if thetas.shape != features.shape:
-        tmp_theta = thetas.reshape(-1, 1)
-    return np.dot(features, tmp_theta)
+    res = weights @ features if bias is None else weights @ features + bias
+    return res
 
 
-def sigmoid(
-        thetas: np.ndarray,
-        features: np.ndarray,
-        value: float | None = None
-        ) -> float:
+def sigmoid(values: np.ndarray | float) -> np.ndarray | float:
     """Calculate sigmoid function for one sample
 
     Parameters:
-      thetas (np.ndarray): Thetas values for score function
-      features (np.ndarray): Features values for score function
-      value (float | None): If value is given, calculate sigmoid for this
-                       value instead of score function
+      values (numpy.ndarray | float): Values to use for the sigmoid function
 
     Returns:
-      np.ndarray: Sigmoid value
+      np.ndarray | float: Sigmoid value
     """
-    val = value if value is not None else score_function(thetas, features)
-    return 1 / (1 + np.exp(-val))
+    return 1 / (1 + np.exp(-values))
+
+
+def softmax(z: np.ndarray) -> np.ndarray:
+    """Compute the softmax of a vector.
+    Parameters:
+      z (numpy.ndarray): Input vector.
+
+    Return:
+      numpy.ndarray: Softmax of the input vector.
+    """
+    z_max = ftm.ft_max(z)
+    exp_z = np.exp(z - z_max)
+    return exp_z / np.sum(exp_z)
 
 
 def batch_gradient_descent(thetas: np.ndarray,
@@ -601,3 +660,44 @@ def mini_batch_gradient_descent(thetas: np.ndarray,
         gradient = np.dot(errors, data_batch) / len(data_batch)
         new_thetas -= alpha * gradient
     return new_thetas
+
+
+def perceptron(inputs: np.ndarray,
+               weights: np.ndarray,
+               bias: float,
+               activation=sigmoid
+               ) -> np.ndarray:
+    """Single perceptron
+
+    Parameters:
+      inputs (np.ndarray): Input data (matrix)
+      weights (np.ndarray): Weights of the perceptron
+      bias (float): Bias of the perceptron
+      activation (function): Activation function to use
+
+    Returns:
+      np.ndarray: Output of the perceptron
+    """
+    weighted_sum = np.dot(weights, inputs) + bias
+    return activation(weighted_sum)
+
+
+def hidden_layer(inputs: np.ndarray,
+                 weights: np.ndarray,
+                 bias: np.ndarray,
+                 activation=sigmoid
+                 ) -> np.ndarray:
+    """Compute the output of a hidden layer
+
+    Parameters:
+    input (np.ndarray): Input data (matrix)
+    weights (np.ndarray): Weights of the layer (matrix)
+    bias (np.ndarray): Bias of the layer
+    activation (function) (optionnal): Activation function to use (default:
+                                       sigmoid)
+
+    Returns:
+      np.ndarray: Output of the layer (matrix)
+    """
+    weighted_sum = inputs @ weights + bias
+    return activation(weighted_sum)
