@@ -122,6 +122,7 @@ def main(args):
 
         # Writing to file
         train_set.to_csv(args.outfile[0], index=False)
+        # test_set['diagnosis'] = None  # Removind diagnosis value
         test_set.to_csv(args.outfile[1], index=False)
     except Exception as e:
         print(f"{RED}Error{RESET}: {e}")
