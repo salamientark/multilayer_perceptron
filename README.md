@@ -1,5 +1,7 @@
 # multilayer perceptron
 
+Goal of the project is described in multilayer_perceptron.pdf
+
 ## How I proceeded
 
 #### Analyzing dataset
@@ -17,3 +19,13 @@ redundancy and predictive power
 - We devide the dataset into two parts (train_dataset, test_dataset).
 We'll use a optionnal argument that will be the seed of the dataset shuffle.
 Those will allow to reproduce same splitting.
+
+
+
+# TODO
+
+- Make model template
+- Add overide parameters from CLI over conf file
+- Add fill parameters to model template
+- Verify model
+- return model

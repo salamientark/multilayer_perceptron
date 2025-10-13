@@ -69,7 +69,7 @@ def validate_args(args):
         raise Exception("Enter value for --epoch/-e.")
     if args.conf is None and args.train_ratio is None:
         raise Exception("Enter value for --train_ratio/-tr.")
-    if args.conf is None and args.learning_rate is None:
+    if args.conf is None and args.alpha is None:
         raise Exception("Enter value for --learning_rate/-a.")
     if args.conf is None and args.batch is None:
         raise Exception("Enter value for --batch/-b.")
@@ -84,7 +84,7 @@ def validate_args(args):
         raise Exception("All layer must have at least one neuron.")
     if args.epoch is not None and args.epoch <= 0:
         raise Exception("Number of epoch must be > 0.")
-    if args.learning_rate is not None and not (0 < args.learning_rate < 1):
+    if args.alpha is not None and not (0 < args.alpha < 1):
         raise Exception("Learning rate must be in the range (0, 1]")
     if args.seed is not None and args.seed <= 0:
         raise Exception("Seed must be a positive integer")
@@ -123,7 +123,7 @@ def parse_args():
     parser.add_argument("--epoch", "-e", type=int,
                         # default=84,
                         help="Number of iteration of the trainig.")
-    parser.add_argument("--learning_rate", "-a", type=float,
+    parser.add_argument("--learning_rate", "-a", type=float, dest="alpha",
                         # default=0.1,
                         help="Learning rate of the algorithm.")
     parser.add_argument("--batch", "-b", type=int, required=False,
@@ -143,106 +143,136 @@ def parse_args():
                         help="Training dataset.")
     # Get args
     args = parser.parse_args()
+    return args
     if args.conf is not None:
         return args
 
-    # Custom error checking
-    # if args.seed is None:
-    #     parser.error("Enter value for --seed/-s.")
-    # if args.epoch is None:
-    #     parser.error("Enter value for --epoch/-e.")
-    # if args.train_ratio is None:
-    #     parser.error("Enter value for --train_ratio/-tr.")
-    # if args.learning_rate is None:
-    #     parser.error("Enter value for --learning_rate/-a.")
-    # if args.epoch is None:
-    #     parser.error("Enter value for --epoch/-e.")
-    # if (args.layer is None) != (args.neurons is None):
-    #     parser.error("--layer and --neurons MUST be used together")
-    # if args.shape is None and args.layer is None:
-    #     parser.error("Either --shape or --layer and --neurons must be used")
-    # if args.shape is None and args.layer is not None:
-    #     args.shape = [args.neurons] * args.layer
-    # if any(n <= 0 for n in args.shape):
-    #     parser.error("All layer must have at least one neuron.")
-    # if args.epoch is not None and args.epoch <= 0:
-    #     parser.error("Number of epoch must be > 0.")
-    # if args.learning_rate is not None and not (0 < args.learning_rate < 1):
-    #     parser.error("Learning rate must be in the range (0, 1]")
-    # if args.seed is not None and args.seed <= 0:
-    #     parser.error("Seed must be a positive integer")
-    # if args.train_ratio is not None and not (0 < args.train_ratio < 1):
-    #     parser.error("Train ratio must be between 0 and 1 excluded.")
-    try:
-        validate_args(args)
-    except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
-
-    return args
 
 # model = {
+#         'epoch': int,
+#         'alpha': float,
+#         'batch': int,
+#         'loss': function,
+#         'data_train': DataFrame
+#         'data_test': DataFrame
 #         'input': matrix,
 #         'hidden': [[
 #                     weights: matrix,
-#                     acivation: matrix
+#                     acivation: matrix,
+#                     weight_init: function
+#                    ],
+#                    [
+#                      ...
 #                    ]
 #                   ]
-#         'output': [wights: matrix, activation: function]
-#         'epoch': int,
-#         'alpha': float
-#         }
-# [weights, activation function]
+#         'output': [
+#                    weights: matrix,
+#                    activation: function,
+#                    weight_init: function
+#                   ]
+# }
 
-def init_model_from_json(config_file) -> dict:
+def init_model_template() -> dict:
+    """Initialize empty model template with default structure
+
+    Creates a dictionary template for the multilayer perceptron model
+    with all required fields set to None or empty lists.
+
+    Return:
+        dict: Empty model template with keys for epoch, alpha (learning rate),
+              batch size, loss function, input layer, hidden layers, and
+              output layer
+    """
+    model = {
+            'epoch': None,        # Number of training iterations
+            'alpha': None,        # Learning rate for gradient descent
+            'batch': None,        # Batch size for mini-batch gradient descent
+            'loss': None,         # Loss function to optimize
+            'data_train': None,
+            'data_test': None,
+            'input': None,        # Input layer configuration
+            'layers': {},         # List of hidden layer configurations
+            'output': {}          # Output layer configuration
+            }
+    return model
+
+
+def fill_default_model_values(model: dict) -> dict:
+
+    # model['output']['weight_init']
+    return model
+
+
+def fill_model_from_json(model: dict, config_file) -> dict:
     """Initalize model structure from provided json file
 
     Return:
       dict: Model Parameters
     """
-    model = json.load(config_file)
-    # print(model)
+    conf = json.load(config_file)
+    print(json.dumps(conf, indent=4))
+    print('\n\n\n')
+    for key, _ in model.items():
+        model[key] = conf[key] if key in conf else model[key]
     return model
 
 
-def init_model_from_param(args, input_size: int, output_size: int, template: dict) -> dict:
+def fill_model_from_param(args, input_size: int, output_size: int, model: dict) -> dict:
     """Initialize model parameters
 
     Parameters
       args (argparse.Namespace): Parsed program arguments
+      input_size (int): Size of the input layer
+      output_size (int): Size of the output layer
       train_set (pandas.DataFrame): The training set
 
     Returns:
       dict: Model parameters
     """
-    model = template
-    if args.batch_size is not None:
-        model['batch_size'] = args.batch_size
+    # model = template
+
+    # USER ADDED PARAM
+    # Basic features overide
+    # for key, _ in model.items():
+
+    if args.batch is not None:
+        model['batch'] = args.batch
     if args.epoch is not None:
         model['epoch'] = args.epoch
     if args.learning_rate is not None:
         model['alpha'] = args.learning_rate
     if args.loss is not None:
         model['loss'] = args.loss
+    if args.seed is not None:
+        model['seed'] = args.seed
     if args.features is not None:
-        args['input']['shape'] = len(args.features)
-    # if args.features is not None:
-    #     args['input']['shape'] = len(args.features)
+        model['features'] = args.features
 
-    model['output'] = {
-            'shape': output_size
-            }
+    # Input layer init
+
+    # model['output'] = {
+    #         'shape': output_size
+    #         }
 
     # for i in range(len(shape))
     # model['layers'] = {
     #         'shape': 
     #         'weights': ftdt.init_weights_zero()
 
+    # AUTOMATICALLY ADDED PARAM (=default)
+
+    return model
+
 
 def main(args):
     """Train the model"""
     print(args)
+    model = init_model_template()
     if args.conf is not None:
-        init_model_from_json(args.conf)
+        model = fill_model_from_json(model, args.conf)
+    # model = init_model_from_param(args, 0, 0, model)
+    print(json.dumps(model, indent=4))
+    # model = init_model_from_param(args, )
     return
 
     #
