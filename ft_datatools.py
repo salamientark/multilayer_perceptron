@@ -548,7 +548,7 @@ def score_function(weights: np.ndarray,
     return res
 
 
-def cross_entropy(prediction: np.ndarray, truth: np.ndarray):
+def categorical_cross_entropy(prediction: np.ndarray, truth: np.ndarray):
     """Calculate CrossEntropy for model tunning (loss)
 
     Parameters:
@@ -559,8 +559,10 @@ def cross_entropy(prediction: np.ndarray, truth: np.ndarray):
       (np.ndarray): CrossEntropy result for each input
     """
     epsilon = 1e-9
-    loss = -(truth @ np.log(prediction))
-    return loss
+    clipped_prediction = np.clip(prediction, epsilon, 1.0 - epsilon)
+    loged_prediction = np.log(clipped_prediction)
+    loss = truth * loged_prediction
+    return -np.sum(loss, axis=1)
 
 
 def sigmoid(values: np.ndarray | float) -> np.ndarray | float:

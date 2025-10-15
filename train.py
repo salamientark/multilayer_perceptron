@@ -39,7 +39,8 @@ FEATURES = [
 TARGET = 'diagnosis'
 FUNCTION_MAP = {
         'sigmoid': ftdt.sigmoid,
-        'softmax': ftdt.softmax
+        'softmax': ftdt.softmax,
+        'CategoricalCrossentropy': ftdt.categorical_cross_entropy
         }
 
 
@@ -277,10 +278,17 @@ def main(args):
     model['output']['shape'] = filtered_df[TARGET].nunique()
 
     if model['loss'] is None:
-        model['loss'] = 
+        model['loss'] = FUNCTION_MAP['CategoricalCrossentropy']
     # print(train_set, '\n\n\n')
     # print(validation_set)
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
+
+
+    print("Testing loss function")
+    loss = ftdt.categorical_cross_entropy(np.array([[0.1, 0.8, 0.1], [0.7, 0.2, 0.1], [0.2, 0.3, 0.5]]),
+                              np.array([[0., 1., 0.], [1., 0., 0.], [0., 0., 1.]]))
+    print("ok")
+    print(loss)
     return
     #
     standardized = ftdt.standardize_df(df.drop(['id'],
