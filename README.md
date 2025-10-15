@@ -27,6 +27,10 @@ Those will allow to reproduce same splitting.
 [x] Make model template
 [x] Add overide parameters from CLI over conf file
 [x] Add fill parameters to model template
-[ ] Verify model
-[ ] return model
+[x] Verify model
+[x] return model
+[ ] Create training process
+- Separate data [ ]
+- Create forward propagation process [ ]
+- 
 
