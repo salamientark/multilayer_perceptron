@@ -271,25 +271,63 @@ def fill_model_datasets(model: dict, dataset, training_rate: float, seed: int) -
 
 
 def check_model(model: dict):
-    """Check if the model is valid"""
+    """Check if the model is valid
+
+    Will raise an Exception if the model is not valid.
+
+    Parameters:
+      model (dict): Model parameters to validate
+    """
+    if model['epoch'] is None or model['epoch'] <= 0:
+        raise Exception("Number of epoch must be a positive integer.")
+    if model['alpha'] is None or not (0 < model['alpha'] <= 1):
+        raise Exception("Learning rate must be in the range (0, 1].")
+    if model['batch'] is not None and model['batch'] <= 0:
+        raise Exception("Batch size must be a positive integer.")
+    if (model['loss'] is None or model['loss']
+            is not ftdt.categorical_cross_entropy):
+        raise Exception("Loss function must be categoricalCrossentropy.")
+    if model['data_train'] is None or model['data_test'] is None:
+        raise Exception("Training and validation datasets must be provided.")
+    if model['input']['shape'] is None or model['input']['shape'] <= 0:
+        raise Exception("Input layer must have a positive number of neurons.")
+    if (model['input']['features'] is None 
+            or len(model['input']['features']) == 0):
+        raise Exception("Input layer must have at least one feature.")
+    if model['output']['shape'] is None or model['output']['shape'] <= 0:
+        raise Exception("Output layer must have a positive number of neurons.")
+    if (model['output']['activation'] is None or model['output']['activation']
+            is not ftdt.softmax):
+        raise Exception("Output layer activation must be softmax.")
+    if (model['output']['weight_init'] is None or
+            model['output']['weight_init'] is not ftdt.init_weights_zero):
+        raise Exception("Output layer weight initialization must be zero "
+                        "initialization.")
+    for layer in model['layers']:
+        if layer['shape'] is None or layer['shape'] <= 0:
+            raise Exception("All hidden layers must have a positive number of"
+                            " neurons.")
+        if (layer['activation'] is None 
+                or layer['activation'] is not ftdt.sigmoid):
+            raise Exception("All hidden layers must use the sigmoid "
+                            "activation function.")
+        if (layer['weight_init'] is None or layer['weight_init']
+                is not ftdt.init_weights_zero):
+            raise Exception("All hidden layers must use zero weight "
+                            "initialization.")
+
     
 
 def main(args):
     """Train the model"""
-    # print(args)
     model = init_model_template()
     if args.conf is not None:
         model = fill_model_from_json(model, args.conf)
-    # print(json.dumps(model, indent=4), '\n\n\n')
     model = fill_model_from_param(args, model)
-    # print(json.dumps(model, indent=4, cls=FunctionEncoder))
-
-    # Extract dataset
     model = fill_model_datasets(model, args.dataset, args.train_ratio, args.seed)
-
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
-    # print(model['data_train'])
+    check_model(model)  # Validate model inputs
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
     return
     #
