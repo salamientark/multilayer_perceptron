@@ -40,7 +40,7 @@ TARGET = 'diagnosis'
 FUNCTION_MAP = {
         'sigmoid': ftdt.sigmoid,
         'softmax': ftdt.softmax,
-        'CategoricalCrossentropy': ftdt.categorical_cross_entropy
+        'categoricalCrossentropy': ftdt.categorical_cross_entropy
         }
 
 
@@ -247,8 +247,28 @@ def fill_model_from_param(args, model: dict) -> dict:
     return model
 
 
-def fill_model_datasets():
-    pass
+def fill_model_datasets(model: dict, dataset, training_rate: float, seed: int) -> dict:
+    """Split dataset and fill model with training and validation set
+
+    Parameters:
+      model (dict): Model parameters to fill with datasets
+      dataset (pandas.DataFrame): The complete dataset
+      training_rate (float): Ratio of the dataset to use for training
+      seed (int): Seed for random operations to ensure reproducibility
+
+    Returns:
+      dict: Model parameters populated with training and validation datasets
+    """
+    # Extract dataset
+    df = pd.read_csv(dataset)  # Read dataset file
+    filtered_df = df[FEATURES + [TARGET]]  # Keep only interseting columns
+    model['data_train'], model['data_test'] = ftdt.split_dataset(
+            filtered_df, ratio=training_rate, seed=args.seed)
+    # Fill output shape
+    model['output']['activation'] = ftdt.softmax
+    model['output']['weight_init'] = ftdt.init_weights_zero
+    model['output']['shape'] = filtered_df[TARGET].nunique()
+    return model
 
 
 def check_model(model: dict):
@@ -266,29 +286,17 @@ def main(args):
     # print(json.dumps(model, indent=4, cls=FunctionEncoder))
 
     # Extract dataset
-    df = pd.read_csv(args.dataset)  # Read dataset file
-    filtered_df = df[FEATURES + [TARGET]]  # Keep only interseting columns
-    train_set, validation_set = ftdt.split_dataset(filtered_df, seed=args.seed)
-    model['data_train'] = train_set
-    model['data_test'] = validation_set
-
-    # Fill output shape
-    model['output']['activation'] = ftdt.softmax
-    model['output']['weight_init'] = ftdt.init_weights_zero
-    model['output']['shape'] = filtered_df[TARGET].nunique()
+    model = fill_model_datasets(model, args.dataset, args.train_ratio, args.seed)
 
     if model['loss'] is None:
-        model['loss'] = FUNCTION_MAP['CategoricalCrossentropy']
+        model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
     # print(train_set, '\n\n\n')
     # print(validation_set)
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
 
 
-    print("Testing loss function")
     loss = ftdt.categorical_cross_entropy(np.array([[0.1, 0.8, 0.1], [0.7, 0.2, 0.1], [0.2, 0.3, 0.5]]),
                               np.array([[0., 1., 0.], [1., 0., 0.], [0., 0., 1.]]))
-    print("ok")
-    print(loss)
     return
     #
     standardized = ftdt.standardize_df(df.drop(['id'],
