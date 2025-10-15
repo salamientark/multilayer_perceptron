@@ -548,6 +548,21 @@ def score_function(weights: np.ndarray,
     return res
 
 
+def cross_entropy(prediction: np.ndarray, truth: np.ndarray):
+    """Calculate CrossEntropy for model tunning (loss)
+
+    Parameters:
+      prediction (np.ndarray): Values predicted by the model
+      truth (np.ndarray): True value from the dataset
+
+    Return:
+      (np.ndarray): CrossEntropy result for each input
+    """
+    epsilon = 1e-9
+    loss = -(truth @ np.log(prediction))
+    return loss
+
+
 def sigmoid(values: np.ndarray | float) -> np.ndarray | float:
     """Calculate sigmoid function for one sample
 
