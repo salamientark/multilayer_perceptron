@@ -259,12 +259,11 @@ def fill_model_datasets(model: dict, dataset, training_rate: float, seed: int) -
     Returns:
       dict: Model parameters populated with training and validation datasets
     """
-    # Extract dataset
-    df = pd.read_csv(dataset)  # Read dataset file
-    filtered_df = df[FEATURES + [TARGET]]  # Keep only interseting columns
+    df = pd.read_csv(dataset)
+    filtered_df = df[FEATURES + [TARGET]]
+    standardized_data = ftdt.standardize_df(filtered_df)
     model['data_train'], model['data_test'] = ftdt.split_dataset(
-            filtered_df, ratio=training_rate, seed=args.seed)
-    # Fill output shape
+            standardized_data, ratio=training_rate, seed=args.seed)
     model['output']['activation'] = ftdt.softmax
     model['output']['weight_init'] = ftdt.init_weights_zero
     model['output']['shape'] = filtered_df[TARGET].nunique()
@@ -290,13 +289,8 @@ def main(args):
 
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
-    # print(train_set, '\n\n\n')
-    # print(validation_set)
+    # print(model['data_train'])
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
-
-
-    loss = ftdt.categorical_cross_entropy(np.array([[0.1, 0.8, 0.1], [0.7, 0.2, 0.1], [0.2, 0.3, 0.5]]),
-                              np.array([[0., 1., 0.], [1., 0., 0.], [0., 0., 1.]]))
     return
     #
     standardized = ftdt.standardize_df(df.drop(['id'],
