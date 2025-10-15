@@ -24,8 +24,9 @@ Those will allow to reproduce same splitting.
 
 # TODO
 
-- Make model template
-- Add overide parameters from CLI over conf file
-- Add fill parameters to model template
-- Verify model
-- return model
+[x] Make model template
+[x] Add overide parameters from CLI over conf file
+[x] Add fill parameters to model template
+[ ] Verify model
+[ ] return model
+
