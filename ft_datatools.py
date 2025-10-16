@@ -426,7 +426,7 @@ def init_thetas(classes: list, feature_nbr: int) -> dict:
     return thetas
 
 
-def init_weights_zero(features: int, output: int) -> np.ndarray:
+def init_weights_zero(features: int, output: int) -> tuple[np.ndarray, float]:
     """Initialize a weight matrix with zeros
 
     Parameters:
@@ -434,9 +434,26 @@ def init_weights_zero(features: int, output: int) -> np.ndarray:
       output (int): Number of outputs (next layer neurons nbr)
 
     Returns:
-      np.ndarray: Weight matrix
+        tuple(np.ndarray, float): Weights matrix and bias
     """
-    return np.zeros((features, output))
+    return np.zeros((features, output)), 0.0
+
+
+def he_initialisation(features: int, output: int, seed: int
+                      ) -> tuple[np.ndarray, float]:
+    """Initialize a weight matrix with He initialization
+
+    Parameters:
+      feature (int): Number of features
+      output (int): Number of outputs (next layer neurons nbr)
+      seed (int): Random seed
+
+    Returns:
+        tuple(np.ndarray, float): Weights matrix and bias
+    """
+    rng = np.random.default_rng(seed=seed)
+    return (rng.standard_normal(size=(features, output)) *
+            np.sqrt(2 / output), 0.0)
 
 
 def unstandardized_thetas(
@@ -587,7 +604,7 @@ def softmax(z: np.ndarray) -> np.ndarray:
     """
     z_max = ftm.ft_max(z)
     exp_z = np.exp(z - z_max)
-    return exp_z / np.sum(exp_z)
+    return exp_z / np.sum(exp_z, axis=1)[:, None]
 
 
 def batch_gradient_descent(thetas: np.ndarray,

@@ -96,29 +96,37 @@ def ft_std(
     return v ** 0.5
 
 
-def ft_min(array) -> int | float:
+def ft_min(array) -> int | float | np.ndarray:
     """Return the minimum of a list of numbers.
 
     Parameters:
       array (list): List of numbers.
 
     Returns:
-      int | float: Minimum of the list of numbers.
+      int | float | np.ndarray: Minimum of the list of numbers.
     """
-    sorted_array = sorted(array)
+    array_cp = np.copy(array)
+    if isinstance(array_cp[0], (list, np.ndarray)):
+        sorted_array = np.sort(array_cp, axis=1)
+        return sorted_array[:, 0:]
+    sorted_array = sorted(array_cp)
     return sorted_array[0]
 
 
-def ft_max(array) -> int | float:
+def ft_max(array) -> int | float | np.ndarray:
     """Return the maximum of a list of numbers.
 
     Parameters:
       array (list): List of numbers.
 
     Returns:
-      int | float: Maximum of the list of numbers.
+      int | float | np.ndarray: Maximum of the list of numbers.
     """
-    sorted_array = sorted(array)
+    array_cp = np.copy(array)
+    if isinstance(array_cp[0], (list, np.ndarray)):
+        sorted_array = np.sort(array_cp, axis=1)
+        return sorted_array[:, -1:]
+    sorted_array = sorted(array_cp)
     return sorted_array[-1]
 
 

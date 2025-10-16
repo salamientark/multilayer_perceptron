@@ -5,6 +5,8 @@ import ft_datatools as ftdt
 import json as json
 from create_model import create_model
 
+import ft_math as ftm
+
 
 class FunctionEncoder(json.JSONEncoder):
     """Custom JSON encoder to handle function objects."""
@@ -12,6 +14,8 @@ class FunctionEncoder(json.JSONEncoder):
         if callable(o):
             return o.__name__
         elif isinstance(o, pd.DataFrame):
+            return o.shape
+        elif isinstance(o, np.ndarray):
             return o.shape
         return json.JSONEncoder.default(self, o)
 
@@ -143,6 +147,8 @@ def check_model(model: dict):
     if (model['loss'] is None or model['loss']
             is not ftdt.categorical_cross_entropy):
         raise Exception("Loss function must be categoricalCrossentropy.")
+    if (model['seed'] is None or model['seed'] <= 0):
+        raise Exception("Seed must be a positive integer.")
     if model['data_train'] is None or model['data_test'] is None:
         raise Exception("Training and validation datasets must be provided.")
     if model['input']['shape'] is None or model['input']['shape'] <= 0:
@@ -156,7 +162,7 @@ def check_model(model: dict):
             is not ftdt.softmax):
         raise Exception("Output layer activation must be softmax.")
     if (model['output']['weight_init'] is None or
-            model['output']['weight_init'] is not ftdt.init_weights_zero):
+            model['output']['weight_init'] is not ftdt.he_initialisation):
         raise Exception("Output layer weight initialization must be zero "
                         "initialization.")
     for layer in model['layers']:
@@ -168,16 +174,67 @@ def check_model(model: dict):
             raise Exception("All hidden layers must use the sigmoid "
                             "activation function.")
         if (layer['weight_init'] is None or layer['weight_init']
-                is not ftdt.init_weights_zero):
+                is not ftdt.he_initialisation):
             raise Exception("All hidden layers must use zero weight "
                             "initialization.")
 
+
+def init_model(model: dict) -> dict:
+    """Initialize model weights and bias
+
+    Parameters:
+      model (dict): Model parameters to initialize
+
+    Returns:
+      dict: Model with initialized weights and bias
+    """
+    seed = model['seed']
+    for i, layer in enumerate(model['layers']):
+        if i == 0:
+            layer['weights'], layer['bias'] = layer['weight_init'](
+                    model['input']['shape'], layer['shape'], seed)
+            continue
+        layer['weights'], layer['bias'] = layer['weight_init'](
+                model['layers'][i - 1]['shape'], layer['shape'], seed)
+    model['output']['weights'], model['output']['bias'] = \
+            model['output']['weight_init'](
+                model['layers'][-1]['shape'], model['output']['shape'],
+                seed
+            )
+    return model
+
+
+def train(model: dict):
+    """Perform the training of the model
+
+    Parameters:
+      model (dict): Model parameters to train
+    """
+
+    # Feed forward
+    output = model['data_train'][model['input']['features']]  # Filter features
+    # inputs: np.ndarray = np.empty((0, model['output']['shape']))
+    for layer in model['layers']:
+        inputs = np.copy(output)
+        output = ftdt.hidden_layer(inputs, layer['weights'], layer['bias'],
+                                   layer['activation'])
+
+    return ftdt.hidden_layer(output, model['output']['weights'],
+                               model['output']['bias'],
+                               model['output']['activation'])
+        
 
 def main(args):
     """Train the model"""
     model = create_model(args, TARGET, FEATURES)
     check_model(model)  # Validate model inputs
+
+    init_model(model)  # Init model weights and bias
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
+
+    # train(model)
+    print(train(model))
+
     return
 
 

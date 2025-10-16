@@ -6,7 +6,8 @@ import pandas as pd
 FUNCTION_MAP = {
         'sigmoid': ftdt.sigmoid,
         'softmax': ftdt.softmax,
-        'categoricalCrossentropy': ftdt.categorical_cross_entropy
+        'categoricalCrossentropy': ftdt.categorical_cross_entropy,
+        'heUniform': ftdt.he_initialisation
         }
 
 
@@ -26,6 +27,7 @@ def init_model_template() -> dict:
             'alpha': None,        # Learning rate for gradient descent
             'batch': None,        # Batch size for mini-batch gradient descent
             'loss': None,         # Loss function to optimize
+            'seed': None,
             'data_train': None,
             'data_test': None,
             'input': {
@@ -61,7 +63,7 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
             'activation': (activation if activation is not None
                            else ftdt.sigmoid),
             'weight_init': (weight_init if weight_init is not None
-                            else ftdt.init_weights_zero)
+                            else ftdt.he_initialisation)
             }
     return layer
 
@@ -79,7 +81,6 @@ def fill_model_from_json(model: dict, config_file) -> dict:
     conf = json.load(config_file)
     for k, _ in model.items():
         if k in conf and conf[k] is not None:
-            print(k)
             if k not in ['input', 'output', 'layers']:
                 model[k] = conf[k]
             elif k in ['input', 'output']:
@@ -111,7 +112,7 @@ def fill_model_from_param(args, model: dict) -> dict:
         model['layers'] = [{
             'shape': n,
             'activation': ftdt.sigmoid,
-            'weight_init': ftdt.init_weights_zero
+            'weight_init': ftdt.he_initialisation
             } for n in args.shape]
     # Fill model from args.features
     if args.features is not None:
@@ -150,7 +151,7 @@ def fill_model_datasets(
     model['data_train'], model['data_test'] = ftdt.split_dataset(
             standardized_data, ratio=training_rate, seed=seed)
     model['output']['activation'] = ftdt.softmax
-    model['output']['weight_init'] = ftdt.init_weights_zero
+    model['output']['weight_init'] = ftdt.he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()
     return model
 
