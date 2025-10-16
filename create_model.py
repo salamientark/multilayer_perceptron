@@ -6,7 +6,7 @@ import pandas as pd
 FUNCTION_MAP = {
         'sigmoid': ftdt.sigmoid,
         'softmax': ftdt.softmax,
-        'categoricalCrossentropy': ftdt.categorical_cross_entropy,
+        'categoricalCrossentropy': ftdt.binary_cross_entropy,
         'heUniform': ftdt.he_initialisation
         }
 

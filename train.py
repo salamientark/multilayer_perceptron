@@ -145,7 +145,7 @@ def check_model(model: dict):
     if model['batch'] is not None and model['batch'] <= 0:
         raise Exception("Batch size must be a positive integer.")
     if (model['loss'] is None or model['loss']
-            is not ftdt.categorical_cross_entropy):
+            is not ftdt.binary_cross_entropy):
         raise Exception("Loss function must be categoricalCrossentropy.")
     if (model['seed'] is None or model['seed'] <= 0):
         raise Exception("Seed must be a positive integer.")
