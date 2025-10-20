@@ -254,8 +254,14 @@ def train(model: dict):
         weights = model['layers'][i]['weights']
 
     # Weights update part
-    
-
+    alpha = model['alpha']
+    for layer in model['layers']:
+        layer['weights'] -= alpha * layer['gradients']['weights']
+        layer['bias'] -= alpha * layer['gradients']['bias']
+    model['output']['weights'] -= alpha * \
+        model['output']['gradients']['weights']
+    model['output']['bias'] -= alpha * \
+        model['output']['gradients']['bias']
 
 
 def main(args):
