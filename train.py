@@ -45,6 +45,13 @@ FEATURES = [
 TARGET = 'diagnosis'
 
 
+def print_weights(model: dict):
+    for i, layer in enumerate(model['layers']):
+        print(f"Layer {i + 1} weights:{layer['weights']}")
+        # print(f"Layer {i + 1} type:{type(layer['weights'])}")
+
+
+
 def parse_args():
     """Parse program argument"""
     # Init parser
@@ -229,8 +236,23 @@ def feed_forward(model: dict):
                 model['output']['bias'],
                 activation=model['output']['activation'])
     return
-    
 
+
+def update_weights(model: dict):
+    """Update model weights after training
+
+    Parameters:
+      model (dict): Model parameters to update
+    """
+    alpha = model['alpha']
+    for layer in model['layers']:
+        layer['weights'] -= alpha * layer['gradients']['weights']
+        layer['bias'] -= alpha * layer['gradients']['bias']
+    model['output']['weights'] -= alpha * \
+        model['output']['gradients']['weights']
+    model['output']['bias'] -= alpha * \
+        model['output']['gradients']['bias']
+    
 
 def train(model: dict):
     """Perform the training of the model
@@ -258,21 +280,14 @@ def train(model: dict):
         gradient = gradient @ weights.T
         gradient  *= model['layers'][i]['result'] * (1. - model['layers'][i]['result'])
         if i == 0:
-            model['layers'][i]['gradients']['weights'] = model['data_train'][features].T @ gradient
+            model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
         else:
             model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
         model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
         weights = model['layers'][i]['weights']
 
     # Weights update part
-    alpha = model['alpha']
-    for layer in model['layers']:
-        layer['weights'] -= alpha * layer['gradients']['weights']
-        layer['bias'] -= alpha * layer['gradients']['bias']
-    model['output']['weights'] -= alpha * \
-        model['output']['gradients']['weights']
-    model['output']['bias'] -= alpha * \
-        model['output']['gradients']['bias']
+    update_weights(model)
 
 
 def main(args):
@@ -282,8 +297,11 @@ def main(args):
 
     init_model(model)  # Init model weights and bias
 
+    # print_weights(model)
     train(model)
+    # print_weights(model)
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
+    print("Good exit")
     return
 
 

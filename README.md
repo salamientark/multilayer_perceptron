@@ -24,13 +24,7 @@ Those will allow to reproduce same splitting.
 
 # TODO
 
-[x] Make model template
-[x] Add overide parameters from CLI over conf file
-[x] Add fill parameters to model template
-[x] Verify model
-[x] return model
-[ ] Create training process
-- Separate data [ ]
-- Create forward propagation process [ ]
-- 
-
+[ ] Create derivative funtion for network_layers
+[ ] Add ['derivative'] to model['layer'|'output']
+[ ] rework train process to be modular
+[ ] Implment complete training (epoch)
