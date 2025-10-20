@@ -145,7 +145,7 @@ def check_model(model: dict):
     if model['batch'] is not None and model['batch'] <= 0:
         raise Exception("Batch size must be a positive integer.")
     if (model['loss'] is None or model['loss']
-            is not ftdt.binary_cross_entropy):
+            is not ftdt.categorical_cross_entropy):
         raise Exception("Loss function must be categoricalCrossentropy.")
     if (model['seed'] is None or model['seed'] <= 0):
         raise Exception("Seed must be a positive integer.")
@@ -190,6 +190,7 @@ def init_model(model: dict) -> dict:
     """
     seed = model['seed']
     for i, layer in enumerate(model['layers']):
+        layer['gradients'] = {}
         if i == 0:
             layer['weights'], layer['bias'] = layer['weight_init'](
                     model['input']['shape'], layer['shape'], seed)
@@ -201,6 +202,7 @@ def init_model(model: dict) -> dict:
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed
             )
+    model['output']['gradients'] = {}
     return model
 
 
@@ -210,19 +212,52 @@ def train(model: dict):
     Parameters:
       model (dict): Model parameters to train
     """
-
+    # Init training
+    truth = ftdt.one_encoding(model['data_train'], TARGET)
     # Feed forward
-    output = model['data_train'][model['input']['features']]  # Filter features
-    # inputs: np.ndarray = np.empty((0, model['output']['shape']))
+    inputs = model['data_train'][model['input']['features']]  # Filter features
     for layer in model['layers']:
-        inputs = np.copy(output)
-        output = ftdt.hidden_layer(inputs, layer['weights'], layer['bias'],
+        layer['result'] = ftdt.hidden_layer(inputs, layer['weights'], layer['bias'],
                                    layer['activation'])
+        inputs = np.copy(layer['result'])
 
-    return ftdt.hidden_layer(output, model['output']['weights'],
-                               model['output']['bias'],
-                               model['output']['activation'])
-        
+    # model['output']['result'] = \
+    predictions = ftdt.hidden_layer(model['layers'][-1]['result'],
+                                    model['output']['weights'],
+                                    model['output']['bias'],
+                                    model['output']['activation'])
+    model['output']['result'] = predictions
+
+    # Error calculation
+    # res = ftdt.binary_cross_entropy(model['output']['result'], truth)
+    # print(res)
+
+    # Backpropagation
+    # Simplification of softmax + crossentropy derivative
+    gradient_out = predictions - truth  
+    gradient_weights_out = gradient_out.T @ model['layers'][-1]['result']
+    gradient_bias_out = gradient_out
+    model['output']['gradients']['weights'] = gradient_weights_out
+    model['output']['gradients']['bias'] = gradient_bias_out
+    print("ok")
+    print(f"train: gradient_out.shape = {gradient_out.shape}")
+
+    for layer in model['layers'][:-1]:
+        gradient_hidden = layer['result'].T @ gradient_out
+        print(f"gradient_hidden.shape: {gradient_hidden.shape}")
+
+
+
+
+
+    print(gradient_weights_out)
+    # print(gradient_out)
+
+    # test = ftdt.batch_gradient_descent(model['output']['weights'],
+    #                                    model['layers'][-1]['result'], truth,
+    #                                    model['alpha'])
+    # print(test)
+
 
 def main(args):
     """Train the model"""
@@ -230,10 +265,11 @@ def main(args):
     check_model(model)  # Validate model inputs
 
     init_model(model)  # Init model weights and bias
-    print(json.dumps(model, indent=4, cls=FunctionEncoder))
+    # print(json.dumps(model, indent=4, cls=FunctionEncoder))
 
     # train(model)
-    print(train(model))
+    train(model)
+    # print(model)
 
     return
 

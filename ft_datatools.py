@@ -254,9 +254,11 @@ def one_encoding(df: pd.DataFrame, col: str) -> pd.DataFrame:
     """
     class_list = get_class_list(df, col)
     one_encoded_val = {}
-    for i, c in enumerate(class_list):
+    for _, c in enumerate(class_list):
         one_encoded_val[c] = [int(val == c) for val in class_list]
-    return df[col].map(one_encoded_val)
+    # l = df[col].to_numpy()
+    # return np.array(list(map((lambda x: one_encoded_val[x]), l)))
+    return np.array(list(map((lambda x: one_encoded_val[x]), df[col])))
 
 
 def remove_nan(col: np.ndarray) -> np.ndarray:
@@ -440,7 +442,7 @@ def init_weights_zero(features: int, output: int) -> tuple[np.ndarray, float]:
 
 
 def he_initialisation(features: int, output: int, seed: int
-                      ) -> tuple[np.ndarray, float]:
+                      ) -> tuple[np.ndarray, np.ndarray]:
     """Initialize a weight matrix with He initialization
 
     Parameters:
@@ -449,11 +451,11 @@ def he_initialisation(features: int, output: int, seed: int
       seed (int): Random seed
 
     Returns:
-        tuple(np.ndarray, float): Weights matrix and bias
+        tuple(np.ndarray, np.ndarray): Weights matrix and bias
     """
     rng = np.random.default_rng(seed=seed)
     return (rng.standard_normal(size=(features, output)) *
-            np.sqrt(2 / output), 0.0)
+            np.sqrt(2 / output), np.zeros(output))
 
 
 def unstandardized_thetas(
@@ -622,6 +624,17 @@ def softmax(z: np.ndarray) -> np.ndarray:
     z_max = ftm.ft_max(z)
     exp_z = np.exp(z - z_max)
     return exp_z / np.sum(exp_z, axis=1)[:, None]
+
+
+def new_gradient_descent(weights: np.ndarray,
+                         bias: float,
+                         predictions: np.ndarray,
+                         truth: np.ndarray,
+                         hypothesis=score_function
+                         ) -> np.ndarray:
+    errors = predictions - truth
+    gradient = 2 * (errors @ weights + bias) / len(predictions[0])
+    return gradient
 
 
 def batch_gradient_descent(thetas: np.ndarray,
