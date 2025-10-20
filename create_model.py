@@ -32,7 +32,8 @@ def init_model_template() -> dict:
             'data_test': None,
             'input': {
                 'features': [],
-                'shape': None
+                'shape': None,
+                'data': None
                 },        # Input layer configuration
             'layers': [],         # List of hidden layer configurations
             'output': {
@@ -105,7 +106,8 @@ def fill_model_from_param(args, model: dict) -> dict:
     args_dict = vars(args)
     for key, _ in model.items():
         if key == 'loss':
-            model[key] = FUNCTION_MAP[args_dict[key]]
+            model[key] = (FUNCTION_MAP[args_dict[key]] if args_dict[key]
+                          is not None else None)
             continue
         model[key] = (args_dict[key] if key in args_dict
                       and args_dict[key] is not None
@@ -153,6 +155,7 @@ def fill_model_datasets(
     standardized_data = ftdt.standardize_df(filtered_df)
     model['data_train'], model['data_test'] = ftdt.split_dataset(
             standardized_data, ratio=training_rate, seed=seed)
+    model['input']['data'] = model['data_train'][features].to_numpy()
     model['output']['activation'] = ftdt.softmax
     model['output']['weight_init'] = ftdt.he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()

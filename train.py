@@ -211,6 +211,10 @@ def init_model(model: dict) -> dict:
     return model
 
 
+def feed_forward(model: dict):
+    pass
+
+
 def train(model: dict):
     """Perform the training of the model
 
@@ -221,7 +225,9 @@ def train(model: dict):
     truth = ftdt.one_encoding(model['data_train'], TARGET)
     features = model['input']['features']
     # Feed forward
-    inputs = model['data_train'][features]  # Filter features
+    inputs = model['input']['data']
+    # layers = model['']
+    # for layer in model['layers']
     for layer in model['layers']:
         layer['result'] = ftdt.hidden_layer(
                 inputs, layer['weights'],
