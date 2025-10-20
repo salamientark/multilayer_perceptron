@@ -208,11 +208,31 @@ def init_model(model: dict) -> dict:
                 seed
             )
     model['output']['gradients'] = {}
+    model['output']['truth'] = ftdt.one_encoding(model['data_train'], TARGET)
     return model
 
 
 def feed_forward(model: dict):
-    pass
+    """Perform feed forwrd pass in the mlp
+
+    Used in training calculate result for each layer
+
+    Parameters:
+      model (dict): Model parameters to use for feed forward pass
+    """
+    inputs = model['input']['data']
+    for layer in model['layers']:
+        layer['result'] = ftdt.hidden_layer(
+                inputs, layer['weights'],
+                layer['bias'],
+                activation=layer['activation'])
+        inputs = layer['result']
+    model['output']['result'] = ftdt.hidden_layer(
+                inputs, model['output']['weights'],
+                model['output']['bias'],
+                activation=model['output']['activation'])
+    return
+    
 
 
 def train(model: dict):
@@ -224,22 +244,10 @@ def train(model: dict):
     # Init training
     truth = ftdt.one_encoding(model['data_train'], TARGET)
     features = model['input']['features']
-    # Feed forward
-    inputs = model['input']['data']
-    # layers = model['']
-    # for layer in model['layers']
-    for layer in model['layers']:
-        layer['result'] = ftdt.hidden_layer(
-                inputs, layer['weights'],
-                layer['bias'],
-                layer['activation'])
-        inputs = np.copy(layer['result'])
 
-    predictions = ftdt.hidden_layer(model['layers'][-1]['result'],
-                                    model['output']['weights'],
-                                    model['output']['bias'],
-                                    model['output']['activation'])
-    model['output']['result'] = predictions
+    # Feed forward
+    feed_forward(model)
+    predictions = model['output']['result']
 
     # Backpropagation
     gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
@@ -277,11 +285,8 @@ def main(args):
 
     init_model(model)  # Init model weights and bias
 
-    # train(model)
     train(model)
     print(json.dumps(model, indent=4, cls=FunctionEncoder))
-    # print(model)
-
     return
 
 
