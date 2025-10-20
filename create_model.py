@@ -104,6 +104,9 @@ def fill_model_from_param(args, model: dict) -> dict:
     # Basic features overide
     args_dict = vars(args)
     for key, _ in model.items():
+        if key == 'loss':
+            model[key] = FUNCTION_MAP[args_dict[key]]
+            continue
         model[key] = (args_dict[key] if key in args_dict
                       and args_dict[key] is not None
                       else model[key])

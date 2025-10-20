@@ -6,6 +6,7 @@ import json as json
 from create_model import create_model
 
 import ft_math as ftm
+from types import FunctionType
 
 
 class FunctionEncoder(json.JSONEncoder):
@@ -13,9 +14,13 @@ class FunctionEncoder(json.JSONEncoder):
     def default(self, o):
         if callable(o):
             return o.__name__
+        elif isinstance(o, FunctionType):
+            return o.__name__
         elif isinstance(o, pd.DataFrame):
             return o.shape
         elif isinstance(o, np.ndarray):
+            return o.shape
+        elif isinstance(o, pd.Series):
             return o.shape
         return json.JSONEncoder.default(self, o)
 
@@ -214,49 +219,43 @@ def train(model: dict):
     """
     # Init training
     truth = ftdt.one_encoding(model['data_train'], TARGET)
+    features = model['input']['features']
     # Feed forward
-    inputs = model['data_train'][model['input']['features']]  # Filter features
+    inputs = model['data_train'][features]  # Filter features
     for layer in model['layers']:
-        layer['result'] = ftdt.hidden_layer(inputs, layer['weights'], layer['bias'],
-                                   layer['activation'])
+        layer['result'] = ftdt.hidden_layer(
+                inputs, layer['weights'],
+                layer['bias'],
+                layer['activation'])
         inputs = np.copy(layer['result'])
 
-    # model['output']['result'] = \
     predictions = ftdt.hidden_layer(model['layers'][-1]['result'],
                                     model['output']['weights'],
                                     model['output']['bias'],
                                     model['output']['activation'])
     model['output']['result'] = predictions
 
-    # Error calculation
-    # res = ftdt.binary_cross_entropy(model['output']['result'], truth)
-    # print(res)
-
     # Backpropagation
-    # Simplification of softmax + crossentropy derivative
-    gradient_out = predictions - truth  
-    gradient_weights_out = gradient_out.T @ model['layers'][-1]['result']
-    gradient_bias_out = gradient_out
+    gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
+    gradient_weights_out = model['layers'][-1]['result'].T @ gradient
+    # gradient_bias_out = gradient
+    gradient_bias_out = np.sum(gradient, axis=0)
     model['output']['gradients']['weights'] = gradient_weights_out
     model['output']['gradients']['bias'] = gradient_bias_out
-    print("ok")
-    print(f"train: gradient_out.shape = {gradient_out.shape}")
+    weights = model['output']['weights']
+    for i in range(len(model['layers']) - 1, -1, -1):
+        gradient = gradient @ weights.T
+        gradient  *= model['layers'][i]['result'] * (1. - model['layers'][i]['result'])
+        if i == 0:
+            model['layers'][i]['gradients']['weights'] = model['data_train'][features].T @ gradient
+        else:
+            model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
+        model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
+        weights = model['layers'][i]['weights']
 
-    for layer in model['layers'][:-1]:
-        gradient_hidden = layer['result'].T @ gradient_out
-        print(f"gradient_hidden.shape: {gradient_hidden.shape}")
+    # Weights update part
+    
 
-
-
-
-
-    print(gradient_weights_out)
-    # print(gradient_out)
-
-    # test = ftdt.batch_gradient_descent(model['output']['weights'],
-    #                                    model['layers'][-1]['result'], truth,
-    #                                    model['alpha'])
-    # print(test)
 
 
 def main(args):
@@ -265,10 +264,10 @@ def main(args):
     check_model(model)  # Validate model inputs
 
     init_model(model)  # Init model weights and bias
-    # print(json.dumps(model, indent=4, cls=FunctionEncoder))
 
     # train(model)
     train(model)
+    print(json.dumps(model, indent=4, cls=FunctionEncoder))
     # print(model)
 
     return
