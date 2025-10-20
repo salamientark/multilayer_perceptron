@@ -1,9 +1,12 @@
 import argparse as ap
 import numpy as np
 import pandas as pd
-import ft_datatools as ftdt
 import json as json
 from create_model import create_model
+import preprocessing as pre
+import network_layers as nl
+import loss_functions as lf
+import model_utils as mu
 
 import ft_math as ftm
 from types import FunctionType
@@ -86,7 +89,6 @@ def parse_args():
                         help="Batch size if mini-batch gradient descent is "
                              "used.")
     parser.add_argument("--seed", "-s", type=int,
-                        # default=ftdt.get_random_seed(),
                         help="Seed to make model reproducible")
     parser.add_argument("--train_ratio", "-tr", type=float,
                         # default=0.8,
@@ -150,7 +152,7 @@ def check_model(model: dict):
     if model['batch'] is not None and model['batch'] <= 0:
         raise Exception("Batch size must be a positive integer.")
     if (model['loss'] is None or model['loss']
-            is not ftdt.categorical_cross_entropy):
+            is not lf.categorical_cross_entropy):
         raise Exception("Loss function must be categoricalCrossentropy.")
     if (model['seed'] is None or model['seed'] <= 0):
         raise Exception("Seed must be a positive integer.")
@@ -164,10 +166,10 @@ def check_model(model: dict):
     if model['output']['shape'] is None or model['output']['shape'] <= 0:
         raise Exception("Output layer must have a positive number of neurons.")
     if (model['output']['activation'] is None or model['output']['activation']
-            is not ftdt.softmax):
+            is not nl.softmax):
         raise Exception("Output layer activation must be softmax.")
     if (model['output']['weight_init'] is None or
-            model['output']['weight_init'] is not ftdt.he_initialisation):
+            model['output']['weight_init'] is not mu.he_initialisation):
         raise Exception("Output layer weight initialization must be zero "
                         "initialization.")
     for layer in model['layers']:
@@ -175,11 +177,11 @@ def check_model(model: dict):
             raise Exception("All hidden layers must have a positive number of"
                             " neurons.")
         if (layer['activation'] is None
-                or layer['activation'] is not ftdt.sigmoid):
+                or layer['activation'] is not nl.sigmoid):
             raise Exception("All hidden layers must use the sigmoid "
                             "activation function.")
         if (layer['weight_init'] is None or layer['weight_init']
-                is not ftdt.he_initialisation):
+                is not mu.he_initialisation):
             raise Exception("All hidden layers must use zero weight "
                             "initialization.")
 
@@ -208,7 +210,7 @@ def init_model(model: dict) -> dict:
                 seed
             )
     model['output']['gradients'] = {}
-    model['output']['truth'] = ftdt.one_encoding(model['data_train'], TARGET)
+    model['output']['truth'] = pre.one_encoding(model['data_train'], TARGET)
     return model
 
 
@@ -222,12 +224,12 @@ def feed_forward(model: dict):
     """
     inputs = model['input']['data']
     for layer in model['layers']:
-        layer['result'] = ftdt.hidden_layer(
+        layer['result'] = nl.hidden_layer(
                 inputs, layer['weights'],
                 layer['bias'],
                 activation=layer['activation'])
         inputs = layer['result']
-    model['output']['result'] = ftdt.hidden_layer(
+    model['output']['result'] = nl.hidden_layer(
                 inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
@@ -242,7 +244,7 @@ def train(model: dict):
       model (dict): Model parameters to train
     """
     # Init training
-    truth = ftdt.one_encoding(model['data_train'], TARGET)
+    truth = pre.one_encoding(model['data_train'], TARGET)
     features = model['input']['features']
 
     # Feed forward

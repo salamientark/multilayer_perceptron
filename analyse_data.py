@@ -1,6 +1,8 @@
 import sys
 import pandas as pd
 import ft_datatools as ftdt
+import preprocessing as pre
+import analysis as a
 from matplotlib import pyplot as plt
 import seaborn as sns
 
@@ -67,7 +69,7 @@ def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
     })
     print(f"Drawing pairplot for {len(features)} features...", flush=True,
           end="")
-    if target_col is not None and len(ftdt.get_class_list(
+    if target_col is not None and len(pre.get_class_list(
                                       df, target_col)) > 1:
         plot = sns.pairplot(
             df, hue=target_col, vars=features,
@@ -96,7 +98,7 @@ def heatmap(df: pd.DataFrame):
     Parrameters:
       df (pandas.DataFrame): DataFrame to use for correlation matrix
     """
-    corr_matrix = ftdt.correlation_matrix(df)
+    corr_matrix = a.correlation_matrix(df)
     corr_df = pd.DataFrame(corr_matrix, columns=data_columns_names[2:]
                            + ['diagnosis'])  # back to df
     ax = sns.heatmap(corr_df, cmap="Blues", yticklabels=corr_df.columns,
@@ -127,14 +129,13 @@ def main(ac: int, av: list):
         raw_target = df["diagnosis"]
 
         # Standardize data
-        standardized_data = ftdt.standardize_df(raw_data)
+        standardized_data = pre.standardize_df(raw_data)
 
         # Convert target to numeric
-        numeric_target = ftdt.convert_classes_to_nbr('M', raw_target)
+        numeric_target = pre.convert_classes_to_nbr('M', raw_target)
 
         # Describe data
-        ftdt.ft_describe(raw_data)
-        # ftdt.ft_describe(standardized_data)
+        a.ft_describe(raw_data)
 
         mean_data = standardized_data[data_columns_names[2:12]]
         std_data = standardized_data[data_columns_names[12:22]]

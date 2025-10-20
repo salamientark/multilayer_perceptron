@@ -1,15 +1,17 @@
-import ft_datatools as ftdt
+import network_layers as nl
+import loss_functions as lf
+import model_utils as mu
+import preprocessing as pre
 import json as json
 import pandas as pd
 
 
 FUNCTION_MAP = {
-        'sigmoid': ftdt.sigmoid,
-        'softmax': ftdt.softmax,
-        'categoricalCrossentropy': ftdt.categorical_cross_entropy,
-        'heUniform': ftdt.he_initialisation
+        'sigmoid': nl.sigmoid,
+        'softmax': nl.softmax,
+        'categoricalCrossentropy': lf.categorical_cross_entropy,
+        'heUniform': mu.he_initialisation
         }
-
 
 def init_model_template() -> dict:
     """Initialize empty model template with default structure
@@ -62,9 +64,9 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
     layer = {
             'shape': shape,
             'activation': (activation if activation is not None
-                           else ftdt.sigmoid),
+                           else nl.sigmoid),
             'weight_init': (weight_init if weight_init is not None
-                            else ftdt.he_initialisation)
+                            else mu.he_initialisation)
             }
     return layer
 
@@ -116,8 +118,8 @@ def fill_model_from_param(args, model: dict) -> dict:
     if args.shape is not None:
         model['layers'] = [{
             'shape': n,
-            'activation': ftdt.sigmoid,
-            'weight_init': ftdt.he_initialisation
+            'activation': nl.sigmoid,
+            'weight_init': mu.he_initialisation
             } for n in args.shape]
     # Fill model from args.features
     if args.features is not None:
@@ -152,12 +154,12 @@ def fill_model_datasets(
     if not features:
         features = model['input']['features']
     filtered_df = df[features + [target]]
-    standardized_data = ftdt.standardize_df(filtered_df)
-    model['data_train'], model['data_test'] = ftdt.split_dataset(
+    standardized_data = pre.standardize_df(filtered_df)
+    model['data_train'], model['data_test'] = pre.split_dataset(
             standardized_data, ratio=training_rate, seed=seed)
     model['input']['data'] = model['data_train'][features].to_numpy()
-    model['output']['activation'] = ftdt.softmax
-    model['output']['weight_init'] = ftdt.he_initialisation
+    model['output']['activation'] = nl.softmax
+    model['output']['weight_init'] = mu.he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()
     return model
 
