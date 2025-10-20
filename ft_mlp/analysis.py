@@ -1,15 +1,11 @@
-import sys
+import numpy as np
 import pandas as pd
-import ft_math as ftm
-import ft_datatools as ftdt
+from .ft_math import ft_mean, ft_std, ft_min, ft_max, ft_q1, ft_q2, ft_q3, \
+                     ft_variance, ft_skew, ft_kurtosis
+from .preprocessing import get_numerical_features, remove_nan
 
 
-# COLORS
-RED = '\033[91m'
-RESET = '\033[0m'
-
-
-def print_result(
+def print_describe_result(
         features: list,
         counts: list,
         means: list,
@@ -45,7 +41,7 @@ def print_result(
         print(f"{'':<12}", end="")
         j = i
         while j < step and j < len(features):
-            print(f"{features[j][:15]:>20}", end="")
+            print(f"{str(features[j])[:15]:>20}", end="")
             j += 1
         print()
         j = i
@@ -120,42 +116,87 @@ def print_result(
     return
 
 
-def main(ac: int, av: list):
+def ft_describe(df: pd.DataFrame, exclude: list = []):
     """Describe the dataset given as parameter.
 
     Parameters:
-      ac (int): Number of command line arguments.
-      av (list): List of command line arguments.
+      df (pd.Dataframe): Dataframe to describe
+      exclude (list) (optionnal): List of column to exclude
     """
-    try:
-        if (ac != 2):
-            raise Exception("Usage: describe.py <dataset_path>")
-        df = pd.read_csv(av[1])  # Dataframe
-        features = ftdt.get_numerical_features(df, exclude=['Index'])
-        counts, means, stds, mins, q1s, q2s = [], [], [], [], [], []
-        q3s, maxs = [], []
-        skewness, kurtosis, variance = [], [], []
-        for feature in features:
-            col = ftdt.filter_col(df[feature])
-            size = len(col)
-            counts.append(size)
-            means.append(ftm.ft_mean(col, count=size))
-            stds.append(ftm.ft_std(col, count=size))
-            mins.append(ftm.ft_min(col))
-            q1s.append(ftm.ft_q1(col, count=size))
-            q2s.append(ftm.ft_q2(col, count=size))
-            q3s.append(ftm.ft_q3(col, count=size))
-            maxs.append(ftm.ft_max(col))
-            variance.append(ftm.ft_variance(col, mean=means[-1], count=size))
-            skewness.append(ftm.ft_skew(
-                col, mean=means[-1], std=stds[-1], count=size))
-            kurtosis.append(ftm.ft_kurtosis(
-                col, mean=means[-1], std=stds[-1], count=size))
-        print_result(features, counts, means, stds, mins, q1s, q2s, q3s, maxs,
-                     variance, skewness, kurtosis)
-    except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
+    features = get_numerical_features(df, exclude=exclude)
+    counts, means, stds, mins, q1s, q2s = [], [], [], [], [], []
+    q3s, maxs = [], []
+    skewness, kurtosis, variance = [], [], []
+    for feature in features:
+        col = remove_nan(df[feature])
+        size = len(col)
+        counts.append(size)
+        means.append(ft_mean(col, count=size))
+        stds.append(ft_std(col, count=size))
+        mins.append(ft_min(col))
+        q1s.append(ft_q1(col, count=size))
+        q2s.append(ft_q2(col, count=size))
+        q3s.append(ft_q3(col, count=size))
+        maxs.append(ft_max(col))
+        variance.append(ft_variance(col, mean=means[-1], count=size))
+        skewness.append(ft_skew(
+            col, mean=means[-1], std=stds[-1], count=size))
+        kurtosis.append(ft_kurtosis(
+            col, mean=means[-1], std=stds[-1], count=size))
+    print_describe_result(features, counts, means, stds, mins, q1s, q2s, q3s,
+                          maxs, variance, skewness, kurtosis)
 
 
-if __name__ == "__main__":
-    main(len(sys.argv), sys.argv)
+def ft_shape(df: pd.DataFrame) -> tuple[int, int]:
+    """Return dataframe shape
+
+    Parameters:
+      df (pandas.DataFrame): Dataframe
+
+    Return:
+      tuple[int, int] : (row_number, col_number)
+    """
+    return (len(df), len(df.columns))
+
+
+def correlation_coefficient(
+        x: np.ndarray,
+        y: np.ndarray,
+        count: int | None = None
+        ) -> float:
+    """Calculate the correlation coefficient between two features
+
+    Parameters:
+      x (np.ndarray): First feature
+      y (np.ndarray): Second feature
+      count (int) (optional): number of observation
+    """
+    c = count if count is not None else len(x)
+    x_sum = np.sum(x)
+    y_sum = np.sum(y)
+    numerator = c * np.dot(x, y) - x_sum * y_sum
+    denominator = ((c * np.dot(x, x) - x_sum ** 2) *
+                   (c * np.dot(y, y) - y_sum ** 2)) ** 0.5
+    return numerator / denominator if denominator != 0 else 0
+
+
+def correlation_matrix(df: pd.DataFrame) -> np.ndarray:
+    """Calculate the correlation matrix for the dataframe
+
+    Parameters:
+      df (pd.DataFrame): Dataframe containing numerical features
+    """
+    row_nbr, col_nbr = ft_shape(df)
+    corr_matrix = np.zeros((col_nbr, col_nbr))
+    for x in range(col_nbr):
+        x_feature = df.iloc[:, x]
+        for y in range(x + 1):
+            y_feature = df.iloc[:, y]
+            if x == y:
+                corr_matrix[x][y] = 1
+                continue
+            corr_coef = correlation_coefficient(x_feature, y_feature,
+                                                count=row_nbr)
+            corr_matrix[x][y] = corr_coef
+            corr_matrix[y][x] = corr_coef
+    return corr_matrix

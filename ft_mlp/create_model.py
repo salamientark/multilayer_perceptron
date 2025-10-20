@@ -1,22 +1,23 @@
-import network_layers as nl
-import loss_functions as lf
-import model_utils as mu
-import preprocessing as pre
 import json as json
 import pandas as pd
+from .network_layers import sigmoid, softmax
+from .loss_functions import categorical_cross_entropy
+from .model_utils import he_initialisation
+from .preprocessing import split_dataset, standardize_df
 
 
 FUNCTION_MAP = {
-        'sigmoid': nl.sigmoid,
-        'softmax': nl.softmax,
-        'categoricalCrossentropy': lf.categorical_cross_entropy,
-        'heUniform': mu.he_initialisation
+        'sigmoid': sigmoid,
+        'softmax': softmax,
+        'categoricalCrossentropy': categorical_cross_entropy,
+        'heUniform': he_initialisation
         }
+
 
 def init_model_template() -> dict:
     """Initialize empty model template with default structure
 
-    Creates a dictionary template for the multilayer perceptron model
+    Creates a dictionary template for the tilayer perceptron model
     with all required fields set to None or empty lists.
 
     Return:
@@ -48,7 +49,7 @@ def init_model_template() -> dict:
 
 
 def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
-    """Create a model layer for the multilayer perceptron
+    """Create a model layer for the tilayer perceptron
 
     Parameters:
       shape (int): Number of neurons in the layer
@@ -58,15 +59,15 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
                                     Defaults to zero initialization if None.
 
     Returns:
-      dict: Dictionary representing the layer with keys for shape,
+      dict: Dictionary reenting the layer with keys for shape,
             activation function, and weight initialization function
     """
     layer = {
             'shape': shape,
             'activation': (activation if activation is not None
-                           else nl.sigmoid),
+                           else sigmoid),
             'weight_init': (weight_init if weight_init is not None
-                            else mu.he_initialisation)
+                            else he_initialisation)
             }
     return layer
 
@@ -118,8 +119,8 @@ def fill_model_from_param(args, model: dict) -> dict:
     if args.shape is not None:
         model['layers'] = [{
             'shape': n,
-            'activation': nl.sigmoid,
-            'weight_init': mu.he_initialisation
+            'activation': sigmoid,
+            'weight_init': he_initialisation
             } for n in args.shape]
     # Fill model from args.features
     if args.features is not None:
@@ -154,12 +155,12 @@ def fill_model_datasets(
     if not features:
         features = model['input']['features']
     filtered_df = df[features + [target]]
-    standardized_data = pre.standardize_df(filtered_df)
-    model['data_train'], model['data_test'] = pre.split_dataset(
+    standardized_data = standardize_df(filtered_df)
+    model['data_train'], model['data_test'] = split_dataset(
             standardized_data, ratio=training_rate, seed=seed)
     model['input']['data'] = model['data_train'][features].to_numpy()
-    model['output']['activation'] = nl.softmax
-    model['output']['weight_init'] = mu.he_initialisation
+    model['output']['activation'] = softmax
+    model['output']['weight_init'] = he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()
     return model
 

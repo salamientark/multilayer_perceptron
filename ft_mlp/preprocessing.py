@@ -1,17 +1,17 @@
 import numpy as np
 import pandas as pd
-import ft_math as ftm
+from .ft_math import ft_mean, ft_std
 
 
 def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
-    """Select only the specified columns from the dataframe.
+    """Select o the specified columns from the dataframe.
 
     Parameters:
       df (pd.DataFrame): Dataframe.
       features (list): List of numerical features name.
 
     Returns:
-      pd.DataFrame: Dataframe with only the specified columns.
+      pd.DataFrame: Dataframe with o the specified columns.
     """
     return df[features]
 
@@ -20,7 +20,7 @@ def get_numerical_features(
         df: pd.DataFrame,
         exclude: list = []
         ) -> list:
-    """Get the numerical features name only from a dataframe.
+    """Get the numerical features name o from a dataframe.
 
     Parameters:
       df (pd.DataFrame): Dataframe.
@@ -100,7 +100,7 @@ def one_encoding(df: pd.DataFrame, col: str) -> pd.DataFrame:
 
 
 def remove_nan(col: np.ndarray) -> np.ndarray:
-    """Filter a column to keep only numerical values.
+    """Filter a column to keep o numerical values.
 
     Parameters:
       col (np.ndarray): Column to filter.
@@ -129,7 +129,7 @@ def replace_nan(
       pd.DataFrame: Dataframe with NaN values replaced
     """
     new_df = df.copy()
-    f = func if func is not None else ftm.ft_mean
+    f = func if func is not None else ft_mean
     cols = columns if columns != [] else new_df.columns
     for column in cols:
         tmp_col = remove_nan(new_df[column].tolist())
@@ -156,7 +156,7 @@ def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
 
 def classify(df: pd.DataFrame, target_col: str, features: list
              ) -> dict[str, pd.DataFrame]:
-    """Classify the dataframe into multiple dataframes based on the target
+    """Classify the dataframe into tiple dataframes based on the target
 
     Parameters:
       df (pd.DataFrame): Dataframe.
@@ -188,8 +188,8 @@ def standardize_array(array: np.ndarray,
     Returns:
     np.ndarray: Standardized list.
     """
-    m = mean if mean is not None else ftm.ft_mean(array)
-    s = std if std is not None else ftm.ft_std(array)
+    m = mean if mean is not None else ft_mean(array)
+    s = std if std is not None else ft_std(array)
     standardized = array.copy()
     standardized = (standardized - m) / s if s != 0 else np.zeros(len(array))
     return standardized
@@ -211,7 +211,7 @@ def standardize_df(df: pd.DataFrame, columns: list = []) -> pd.DataFrame:
         columns = get_numerical_features(standardized_df)
     for col in columns:
         col_data = np.array(standardized_df[col].values)
-        std = ftm.ft_std(col_data)
+        std = ft_std(col_data)
         if std == 0:
             standardized_df[col] = 0
         else:
@@ -223,7 +223,7 @@ def split_dataset(df: pd.DataFrame,
                   ratio: float = 0.8,
                   seed: int = 1
                   ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Split dataframe into multiple dataframes according to the given ratio
+    """Split dataframe into tiple dataframes according to the given ratio
 
     Parameters:
     df (pd.DataFrame): Dataframe to split

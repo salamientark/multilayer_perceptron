@@ -1,5 +1,4 @@
 import numpy as np
-import ft_math as ftm
 
 
 def categorical_cross_entropy(prediction: np.ndarray, truth: np.ndarray):

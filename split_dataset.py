@@ -1,6 +1,6 @@
 import argparse as ap
 import pandas as pd
-from ft_datatools import split_dataset
+from ft_mlp import split_dataset
 
 
 # Data columns name

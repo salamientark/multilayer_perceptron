@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import ft_math as ftm
+from .ft_math import ft_mean, ft_std
 from random import seed, randrange
 from sys import maxsize
 
@@ -74,8 +74,8 @@ def unstandardized_thetas(
     Returns:
       dict: Unstandardized thetas
     """
-    means = {feature: ftm.ft_mean(df[feature]) for feature in features}
-    std = {feature: ftm.ft_std(df[feature], mean=means[feature])
+    means = {feature: ft_mean(df[feature]) for feature in features}
+    std = {feature: ft_std(df[feature], mean=means[feature])
            for feature in features}
     unstandardized = {
         cls: [

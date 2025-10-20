@@ -1,5 +1,5 @@
 import numpy as np
-import ft_math as ftm
+from .ft_math import ft_max
 
 
 def score_function(weights: np.ndarray,
@@ -42,7 +42,7 @@ def softmax(z: np.ndarray) -> np.ndarray:
     Return:
       numpy.ndarray: Softmax of the input vector.
     """
-    z_max = ftm.ft_max(z)
+    z_max = ft_max(z)
     exp_z = np.exp(z - z_max)
     return exp_z / np.sum(exp_z, axis=1)[:, None]
 
