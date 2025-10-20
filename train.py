@@ -278,7 +278,7 @@ def train(model: dict):
     weights = model['output']['weights']
     for i in range(len(model['layers']) - 1, -1, -1):
         gradient = gradient @ weights.T
-        gradient  *= model['layers'][i]['result'] * (1. - model['layers'][i]['result'])
+        gradient *= model['layers'][i]['result'] * (1. - model['layers'][i]['result'])
         if i == 0:
             model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
         else:

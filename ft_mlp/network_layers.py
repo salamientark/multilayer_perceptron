@@ -34,6 +34,22 @@ def sigmoid(values: np.ndarray | float) -> np.ndarray | float:
     return 1 / (1 + np.exp(-values))
 
 
+def sigmoid_derivative(sig_result: np.ndarray | float) -> np.ndarray | float:
+    """Calculate sigmoid derivative function for matrix, array, sample
+
+    BEWARE: input has to be the result of the sigmoid function
+    This function is used in backpropagation to compute gradients
+
+    Parameters:
+      sig_result (numpy.ndarray | float): Values to use for the sigmoid
+                                          derivative function
+
+    Returns:
+      numpy.ndarray | float: Sigmoid derivative value
+    """
+    return sig_result * (1 - sig_result)
+
+
 def softmax(z: np.ndarray) -> np.ndarray:
     """Compute the softmax of a vector.
     Parameters:
