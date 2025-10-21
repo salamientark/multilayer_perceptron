@@ -47,7 +47,8 @@ def init_model_template() -> dict:
             'output': {
                 'shape': None,
                 'activation': None,
-                'weight_init': None
+                'weight_init': None,
+                'loss': None
                 }          # Output layer configuration
             }
     return model

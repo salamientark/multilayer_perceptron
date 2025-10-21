@@ -212,29 +212,32 @@ def init_model(model: dict) -> dict:
             )
     model['output']['gradients'] = {}
     model['output']['truth'] = ft_mlp.one_encoding(model['data_train'], TARGET)
+    model['output']['val_truth'] = ft_mlp.one_encoding(model['data_test'], TARGET)
     return model
 
 
-def feed_forward(model: dict):
+def feed_forward(model: dict, inputs: np.ndarray | None = None):
     """Perform feed forwrd pass in the mlp
 
     Used in training calculate result for each layer
 
     Parameters:
       model (dict): Model parameters to use for feed forward pass
+      inputs (np.ndarray): Input data to use for feed forward pass
     """
-    inputs = model['input']['data']
+    model_inputs = (model['input']['data'] if inputs is None else inputs)
     for layer in model['layers']:
         layer['result'] = ft_mlp.hidden_layer(
-                inputs, layer['weights'],
+                model_inputs, layer['weights'],
                 layer['bias'],
                 activation=layer['activation'])
-        inputs = layer['result']
+        model_inputs = layer['result']
     model['output']['result'] = ft_mlp.hidden_layer(
-                inputs, model['output']['weights'],
+                model_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    return
+    model['output']['loss'] = model['loss'](model['output']['result'],
+                                           model['output']['truth'])
 
 
 def backpropagation(model: dict):
@@ -287,12 +290,20 @@ def train(model: dict):
     Parameters:
       model (dict): Model parameters to train
     """
+    # Print param
+    epoch_len = len(str(model['epoch']))
+    print("data_train shape:", model['data_train'].shape)
+    print("data_validation shape:", model['data_test'].shape)
     for i in range(model['epoch']):
-        feed_forward(model)
+        print(f"Epoch {i + 1:0{epoch_len}d}/{model['epoch']:0{epoch_len}d} - "
+              , end="")
+        feed_forward(model, inputs=model['input']['data'])
         backpropagation(model)
         update_weights(model)
-        print(i)
-    print_weights(model)
+        print(f"loss: {np.mean(model['output']['loss']):.6f}")
+        # feed_forward(model, inputs=model['data_test']
+        #              [model['input']['features']].to_numpy())
+        print(f"val_loss: {np.mean(model['output']['loss']):.6f}")
 
 
 def main(args):
@@ -304,8 +315,6 @@ def main(args):
 
     # print_weights(model)
     train(model)
-    print_weights(model)
-    # print(json.dumps(model, indent=4, cls=FunctionEncoder))
     print("Good exit")
     return
 
