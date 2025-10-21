@@ -237,6 +237,34 @@ def feed_forward(model: dict):
     return
 
 
+def backpropagation(model: dict):
+    """Perform backpropagation to compute gradients
+
+    Perform backpropagation to compute gradients for each layer in training
+    process.
+
+    Parameters:
+      model (dict): Model parameters to use for backpropagation
+    """
+    predictions = model['output']['result']
+    truth = model['output']['truth']
+    gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
+    gradient_weights_out = model['layers'][-1]['result'].T @ gradient
+    gradient_bias_out = np.sum(gradient, axis=0)
+    model['output']['gradients']['weights'] = gradient_weights_out
+    model['output']['gradients']['bias'] = gradient_bias_out
+    weights = model['output']['weights']
+    for i in range(len(model['layers']) - 1, -1, -1):
+        gradient = gradient @ weights.T
+        gradient *= model['layers'][i]['derivative'](model['layers'][i]['result'])
+        if i == 0:
+            model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
+        else:
+            model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
+        model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
+        weights = model['layers'][i]['weights']
+
+
 def update_weights(model: dict):
     """Update model weights after training
 
@@ -259,33 +287,12 @@ def train(model: dict):
     Parameters:
       model (dict): Model parameters to train
     """
-    # Init training
-    truth = ft_mlp.one_encoding(model['data_train'], TARGET)
-    features = model['input']['features']
-
-    # Feed forward
-    feed_forward(model)
-    predictions = model['output']['result']
-
-    # Backpropagation
-    gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
-    gradient_weights_out = model['layers'][-1]['result'].T @ gradient
-    gradient_bias_out = np.sum(gradient, axis=0)
-    model['output']['gradients']['weights'] = gradient_weights_out
-    model['output']['gradients']['bias'] = gradient_bias_out
-    weights = model['output']['weights']
-    for i in range(len(model['layers']) - 1, -1, -1):
-        gradient = gradient @ weights.T
-        gradient *= model['layers'][i]['derivative'](model['layers'][i]['result'])
-        if i == 0:
-            model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
-        else:
-            model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
-        model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
-        weights = model['layers'][i]['weights']
-
-    # Weights update part
-    update_weights(model)
+    for i in range(model['epoch']):
+        feed_forward(model)
+        backpropagation(model)
+        update_weights(model)
+        print(i)
+    print_weights(model)
 
 
 def main(args):

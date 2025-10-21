@@ -26,5 +26,9 @@ Those will allow to reproduce same splitting.
 
 [x] Create derivative funtion for network_layers
 [x] Add ['derivative'] to model['layer'|'output']
-[ ] rework train process to be modular
-[ ] Implment complete training (epoch)
+[x] rework train process to be modular
+[x] Implment complete training (epoch)
+[ ] Impement process describe (printing values)
+[ ] Implement weights save
+
+[ ] Implement prediction process
