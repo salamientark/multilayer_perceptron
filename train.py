@@ -51,7 +51,6 @@ def print_weights(model: dict):
         # print(f"Layer {i + 1} type:{type(layer['weights'])}")
 
 
-
 def parse_args():
     """Parse program argument"""
     # Init parser
@@ -271,14 +270,13 @@ def train(model: dict):
     # Backpropagation
     gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
-    # gradient_bias_out = gradient
     gradient_bias_out = np.sum(gradient, axis=0)
     model['output']['gradients']['weights'] = gradient_weights_out
     model['output']['gradients']['bias'] = gradient_bias_out
     weights = model['output']['weights']
     for i in range(len(model['layers']) - 1, -1, -1):
         gradient = gradient @ weights.T
-        gradient *= model['layers'][i]['result'] * (1. - model['layers'][i]['result'])
+        gradient *= model['layers'][i]['derivative'](model['layers'][i]['result'])
         if i == 0:
             model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
         else:
@@ -299,8 +297,8 @@ def main(args):
 
     # print_weights(model)
     train(model)
-    # print_weights(model)
-    print(json.dumps(model, indent=4, cls=FunctionEncoder))
+    print_weights(model)
+    # print(json.dumps(model, indent=4, cls=FunctionEncoder))
     print("Good exit")
     return
 

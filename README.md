@@ -24,7 +24,7 @@ Those will allow to reproduce same splitting.
 
 # TODO
 
-[ ] Create derivative funtion for network_layers
-[ ] Add ['derivative'] to model['layer'|'output']
+[x] Create derivative funtion for network_layers
+[x] Add ['derivative'] to model['layer'|'output']
 [ ] rework train process to be modular
 [ ] Implment complete training (epoch)

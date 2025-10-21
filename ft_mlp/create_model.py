@@ -1,6 +1,6 @@
 import json as json
 import pandas as pd
-from .network_layers import sigmoid, softmax
+from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
 from .model_utils import he_initialisation
 from .preprocessing import split_dataset, standardize_df
@@ -11,6 +11,11 @@ FUNCTION_MAP = {
         'softmax': softmax,
         'categoricalCrossentropy': categorical_cross_entropy,
         'heUniform': he_initialisation
+        }
+
+
+DERIVATIVE_MAP = {
+        sigmoid: sigmoid_derivative
         }
 
 
@@ -49,7 +54,7 @@ def init_model_template() -> dict:
 
 
 def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
-    """Create a model layer for the tilayer perceptron
+    """Create a model layer for the multilayer perceptron
 
     Parameters:
       shape (int): Number of neurons in the layer
@@ -67,7 +72,10 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
             'activation': (activation if activation is not None
                            else sigmoid),
             'weight_init': (weight_init if weight_init is not None
-                            else he_initialisation)
+                            else he_initialisation),
+            'derivative': (DERIVATIVE_MAP[activation] if activation
+                           is not None and activation in DERIVATIVE_MAP
+                           else sigmoid_derivative)
             }
     return layer
 
@@ -96,7 +104,7 @@ def fill_model_from_json(model: dict, config_file) -> dict:
 
 
 def fill_model_from_param(args, model: dict) -> dict:
-    """Initialize model parameters
+    """Initialize model parameters from CLI params
 
     Parameters
       args (argparse.Namespace): Parsed program arguments
@@ -177,6 +185,10 @@ def create_model(args, target: str, features: list = []):
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
                                 args.seed, target, features)
+    # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
+    # Set derivatives for each layer
+    for layer in model['layers']:
+        layer['derivative'] = DERIVATIVE_MAP[layer['activation']]
     return model
