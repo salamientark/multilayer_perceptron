@@ -19,16 +19,3 @@ redundancy and predictive power
 - We devide the dataset into two parts (train_dataset, test_dataset).
 We'll use a optionnal argument that will be the seed of the dataset shuffle.
 Those will allow to reproduce same splitting.
-
-
-
-# TODO
-
-[x] Create derivative funtion for network_layers
-[x] Add ['derivative'] to model['layer'|'output']
-[x] rework train process to be modular
-[x] Implment complete training (epoch)
-[ ] Impement process describe (printing values)
-[ ] Implement weights save
-
-[ ] Implement prediction process

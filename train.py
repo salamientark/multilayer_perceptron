@@ -265,13 +265,6 @@ def backpropagation(model: dict):
       model (dict): Model parameters to use for backpropagation
     """
     predictions = model['output']['result']
-    # print(f"layer 0 shape: {model['layers'][0]['weights'].shape}")
-    # print(f"layer 0 weights: {model['layers'][0]['weights']}")
-    # print(f"layer 1 shape: {model['layers'][2]['result'].shape}")
-    # print(f"layer 1 result: {model['layers'][2]['result']}")
-    # print(f"output shape: {model['output']['result'].shape}")
-    # print(f"output result: {model['output']['result']}")
-    # print(predictions)
     truth = model['output']['train_truth']
     gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
