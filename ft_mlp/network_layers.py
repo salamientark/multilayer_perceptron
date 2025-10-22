@@ -31,10 +31,8 @@ def sigmoid(values: np.ndarray | float) -> np.ndarray | float:
     Returns:
       np.ndarray | float: Sigmoid value
     """
-    positive_sigmoid = lambda x : 1 / (1 + np.exp(-x))
-    negative_sigmoid = lambda x : np.exp(x) / (1 + np.exp(x))
-    return np.where(values >= 0, positive_sigmoid(values),
-                    negative_sigmoid(values))
+    return np.where(values >= 0, 1 / (1 + np.exp(-values)),  # avoid overflow
+                    np.exp(values) / (1 + np.exp(values)))
 
 
 def sigmoid_derivative(sig_result: np.ndarray | float) -> np.ndarray | float:

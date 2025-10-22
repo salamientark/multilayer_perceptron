@@ -217,6 +217,8 @@ def init_model(model: dict) -> dict:
     model['output']['test_result'] = None
     model['output']['train_truth'] = ft_mlp.one_encoding(model['data_train'], TARGET)
     model['output']['test_truth'] = ft_mlp.one_encoding(model['data_test'], TARGET)
+    model['output']['train_loss'] = []
+    model['output']['test_loss'] = []
     return model
 
 
@@ -236,23 +238,25 @@ def feed_forward(model: dict):
                 layer['bias'],
                 activation=layer['activation'])
         train_inputs = layer['result']
-        test_res = ft_mlp.hidden_layer(
+        test_result = ft_mlp.hidden_layer(
                 test_inputs, layer['weights'],
                 layer['bias'],
                 activation=layer['activation'])
-        test_inputs = test_res
+        test_inputs = test_result
     model['output']['result'] = ft_mlp.hidden_layer(
                 train_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    test_res = ft_mlp.hidden_layer(
+    test_result = ft_mlp.hidden_layer(
                 test_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    model['output']['train_loss'] = model['loss'](model['output']['result'],
-                                                  model['output']['train_truth'])
-    model['output']['test_loss'] = model['loss'](test_res,
-                                                  model['output']['test_truth'])
+    model['output']['train_loss'].append(model['loss'](
+            model['output']['result'],
+            model['output']['train_truth']))
+    model['output']['test_loss'].append(model['loss'](
+            test_result,
+            model['output']['test_truth']))
 
 
 def backpropagation(model: dict):
@@ -315,8 +319,8 @@ def train(model: dict):
         feed_forward(model)
         backpropagation(model)
         update_weights(model)
-        print(f"loss: {np.mean(model['output']['train_loss']):.6f} - "
-              f"val_loss: {np.mean(model['output']['test_loss']):.6f}")
+        print(f"loss: {np.mean(model['output']['train_loss'][i]):.6f} - "
+              f"val_loss: {np.mean(model['output']['test_loss'][i]):.6f}")
 
 
 def main(args):

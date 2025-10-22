@@ -57,10 +57,7 @@ def he_initialisation(features: int, output: int, seed: int, inputs: int
     """
     rng = np.random.default_rng(seed=seed)
     return (rng.normal(loc=0.0, scale=np.sqrt(2 / inputs),
-                              size=(features, output)), np.zeros(output))
-    print(features, output)
-    return (rng.standard_normal(size=(features, output)) *
-            np.sqrt(2 / output), np.zeros(output))
+                       size=(features, output)), np.zeros(output))
 
 
 def unstandardized_thetas(
