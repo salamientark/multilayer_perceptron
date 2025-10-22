@@ -208,15 +208,17 @@ def init_model(model: dict) -> dict:
                 model['layers'][i - 1]['shape'], layer['shape'], seed,
                 data_inputs)
     model['output']['weights'], model['output']['bias'] = \
-            model['output']['weight_init'](
+        model['output']['weight_init'](
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
     model['output']['gradients'] = {}
     model['output']['train_result'] = None
     model['output']['test_result'] = None
-    model['output']['train_truth'] = ft_mlp.one_encoding(model['data_train'], TARGET)
-    model['output']['test_truth'] = ft_mlp.one_encoding(model['data_test'], TARGET)
+    model['output']['train_truth'] = ft_mlp.one_encoding(model['data_train'],
+                                                         TARGET)
+    model['output']['test_truth'] = ft_mlp.one_encoding(model['data_test'],
+                                                        TARGET)
     model['output']['train_loss'] = []
     model['output']['test_loss'] = []
     return model
@@ -270,7 +272,7 @@ def backpropagation(model: dict):
     """
     predictions = model['output']['result']
     truth = model['output']['train_truth']
-    gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
+    gradient = predictions - truth  # Partial derivative (Crossentropy/softmax)
     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
     gradient_bias_out = np.sum(gradient, axis=0)
     model['output']['gradients']['weights'] = gradient_weights_out
@@ -278,11 +280,14 @@ def backpropagation(model: dict):
     weights = model['output']['weights']
     for i in range(len(model['layers']) - 1, -1, -1):
         gradient = gradient @ weights.T
-        gradient *= model['layers'][i]['derivative'](model['layers'][i]['result'])
+        gradient *= model['layers'][i]['derivative'](
+                model['layers'][i]['result'])
         if i == 0:
-            model['layers'][i]['gradients']['weights'] = model['input']['train_data'].T @ gradient
+            model['layers'][i]['gradients']['weights'] = \
+                model['input']['train_data'].T @ gradient
         else:
-            model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
+            model['layers'][i]['gradients']['weights'] = \
+                    model['layers'][i - 1]['result'].T @ gradient
         model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
         weights = model['layers'][i]['weights']
 
@@ -301,7 +306,7 @@ def update_weights(model: dict):
         model['output']['gradients']['weights']
     model['output']['bias'] -= alpha * \
         model['output']['gradients']['bias']
-    
+
 
 def train(model: dict):
     """Perform the training of the model
@@ -314,8 +319,8 @@ def train(model: dict):
     print("data_train shape:", model['data_train'].shape)
     print("data_validation shape:", model['data_test'].shape)
     for i in range(model['epoch']):
-        print(f"Epoch {i + 1:0{epoch_len}d}/{model['epoch']:0{epoch_len}d} - "
-              , end="")
+        print(f"Epoch {i + 1:0{epoch_len}d}/{model['epoch']:0{epoch_len}d} - ",
+              end="")
         feed_forward(model)
         backpropagation(model)
         update_weights(model)
@@ -330,7 +335,6 @@ def main(args):
 
     init_model(model)  # Init model weights and bias
 
-    # print_weights(model)
     train(model)
     print("Good exit")
     return
