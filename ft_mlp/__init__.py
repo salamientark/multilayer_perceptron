@@ -15,7 +15,8 @@ from .ft_math import ( # noqa
         ft_q2,
         ft_q3,
         ft_skew,
-        ft_kurtosis
+        ft_kurtosis,
+        ft_argmax
         )
 from .loss_functions import ( # noqa
         categorical_cross_entropy,

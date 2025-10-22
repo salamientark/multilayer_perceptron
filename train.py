@@ -187,6 +187,23 @@ def check_model(model: dict):
                             "initialization.")
 
 
+def calculte_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
+    """Calculate accuracy of predictions
+
+    Parameters:
+      predictions (np.ndarray): Model predictions
+      truth (np.ndarray): Ground truth labels
+
+    Returns:
+      float: Accuracy value
+    """
+    prediction_indexes = np.argmax(predictions, axis=1)
+    truth_indexes = np.argmax(truth, axis=1)
+    good_prediction = (prediction_indexes == truth_indexes)
+    accuracy = np.sum(good_prediction) / len(good_prediction)
+    return accuracy
+
+
 def init_model(model: dict) -> dict:
     """Initialize model weights and bias
 
@@ -221,6 +238,8 @@ def init_model(model: dict) -> dict:
                                                         TARGET)
     model['output']['train_loss'] = []
     model['output']['test_loss'] = []
+    model['output']['train_acc'] = []
+    model['output']['test_acc'] = []
     return model
 
 
@@ -245,20 +264,29 @@ def feed_forward(model: dict):
                 layer['bias'],
                 activation=layer['activation'])
         test_inputs = test_result
-    model['output']['result'] = ft_mlp.hidden_layer(
+    train_predictions = ft_mlp.hidden_layer(
                 train_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    test_result = ft_mlp.hidden_layer(
+    test_predictions = ft_mlp.hidden_layer(
                 test_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
+
+    # Update model
+    train_truth = model['output']['train_truth']
+    test_truth = model['output']['test_truth']
+    model['output']['result'] = train_predictions
     model['output']['train_loss'].append(model['loss'](
-            model['output']['result'],
+            train_predictions,
             model['output']['train_truth']))
     model['output']['test_loss'].append(model['loss'](
-            test_result,
+            test_predictions,
             model['output']['test_truth']))
+    model['output']['test_acc'].append(
+            calculte_accuracy(train_predictions, train_truth))
+    model['output']['train_acc'].append(
+            calculte_accuracy(test_predictions, test_truth))
 
 
 def backpropagation(model: dict):
@@ -326,6 +354,16 @@ def train(model: dict):
         update_weights(model)
         print(f"loss: {np.mean(model['output']['train_loss'][i]):.6f} - "
               f"val_loss: {np.mean(model['output']['test_loss'][i]):.6f}")
+
+
+# def plot_loss_cuve(train_loss: np.ndarray, test_loss: np.ndarray):
+#     """Plot loss curve for training and validation set
+#
+#     Parameters:
+#       train_loss (np.ndarray): Training loss values
+#       test_loss (np.ndarray): Validation loss values
+#     """
+    
 
 
 def main(args):

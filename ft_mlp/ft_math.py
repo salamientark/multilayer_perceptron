@@ -241,3 +241,26 @@ def ft_kurtosis(
         u += (array[i] - m) ** 4
     u /= c
     return u / (st ** 4) - 3 if st != 0 else 0
+
+
+def ft_argmax(array: np.ndarray) -> np.ndarray:
+    """Find the indices of the maximum values along an axis.
+
+    Own implementation of numpy.argmax
+
+    Parameters:
+      array (np.ndarray): Input array.
+
+    Returns:
+      np.ndarray: Indices of the maximum values.
+    """
+    result = np.zeros(array.shape[0],int)
+    for line_index, line in enumerate(array):
+        max_index = 0
+        max_val = line[max_index]
+        for i, val in enumerate(line, 1):
+            if val > max_val:
+                max_val = val
+                max_index = i
+        result[line_index] = max_index
+    return result
