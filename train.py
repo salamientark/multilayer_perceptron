@@ -197,47 +197,62 @@ def init_model(model: dict) -> dict:
       dict: Model with initialized weights and bias
     """
     seed = model['seed']
+    data_inputs = len(model['input']['train_data'])
     for i, layer in enumerate(model['layers']):
         layer['gradients'] = {}
         if i == 0:
             layer['weights'], layer['bias'] = layer['weight_init'](
-                    model['input']['shape'], layer['shape'], seed)
+                    model['input']['shape'], layer['shape'], seed, data_inputs)
             continue
         layer['weights'], layer['bias'] = layer['weight_init'](
-                model['layers'][i - 1]['shape'], layer['shape'], seed)
+                model['layers'][i - 1]['shape'], layer['shape'], seed,
+                data_inputs)
     model['output']['weights'], model['output']['bias'] = \
             model['output']['weight_init'](
                 model['layers'][-1]['shape'], model['output']['shape'],
-                seed
+                seed, data_inputs
             )
     model['output']['gradients'] = {}
-    model['output']['truth'] = ft_mlp.one_encoding(model['data_train'], TARGET)
-    model['output']['val_truth'] = ft_mlp.one_encoding(model['data_test'], TARGET)
+    model['output']['train_result'] = None
+    model['output']['test_result'] = None
+    model['output']['train_truth'] = ft_mlp.one_encoding(model['data_train'], TARGET)
+    model['output']['test_truth'] = ft_mlp.one_encoding(model['data_test'], TARGET)
     return model
 
 
-def feed_forward(model: dict, inputs: np.ndarray | None = None):
+def feed_forward(model: dict):
     """Perform feed forwrd pass in the mlp
 
     Used in training calculate result for each layer
 
     Parameters:
       model (dict): Model parameters to use for feed forward pass
-      inputs (np.ndarray): Input data to use for feed forward pass
     """
-    model_inputs = (model['input']['data'] if inputs is None else inputs)
+    train_inputs = model['input']['train_data']
+    test_inputs = model['input']['test_data']
     for layer in model['layers']:
         layer['result'] = ft_mlp.hidden_layer(
-                model_inputs, layer['weights'],
+                train_inputs, layer['weights'],
                 layer['bias'],
                 activation=layer['activation'])
-        model_inputs = layer['result']
+        train_inputs = layer['result']
+        test_res = ft_mlp.hidden_layer(
+                test_inputs, layer['weights'],
+                layer['bias'],
+                activation=layer['activation'])
+        test_inputs = test_res
     model['output']['result'] = ft_mlp.hidden_layer(
-                model_inputs, model['output']['weights'],
+                train_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    model['output']['loss'] = model['loss'](model['output']['result'],
-                                           model['output']['truth'])
+    test_res = ft_mlp.hidden_layer(
+                test_inputs, model['output']['weights'],
+                model['output']['bias'],
+                activation=model['output']['activation'])
+    model['output']['train_loss'] = model['loss'](model['output']['result'],
+                                                  model['output']['train_truth'])
+    model['output']['test_loss'] = model['loss'](test_res,
+                                                  model['output']['test_truth'])
 
 
 def backpropagation(model: dict):
@@ -250,7 +265,14 @@ def backpropagation(model: dict):
       model (dict): Model parameters to use for backpropagation
     """
     predictions = model['output']['result']
-    truth = model['output']['truth']
+    # print(f"layer 0 shape: {model['layers'][0]['weights'].shape}")
+    # print(f"layer 0 weights: {model['layers'][0]['weights']}")
+    # print(f"layer 1 shape: {model['layers'][2]['result'].shape}")
+    # print(f"layer 1 result: {model['layers'][2]['result']}")
+    # print(f"output shape: {model['output']['result'].shape}")
+    # print(f"output result: {model['output']['result']}")
+    # print(predictions)
+    truth = model['output']['train_truth']
     gradient = predictions - truth  # Partial derivative (Crossentropy, softmax)
     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
     gradient_bias_out = np.sum(gradient, axis=0)
@@ -261,7 +283,7 @@ def backpropagation(model: dict):
         gradient = gradient @ weights.T
         gradient *= model['layers'][i]['derivative'](model['layers'][i]['result'])
         if i == 0:
-            model['layers'][i]['gradients']['weights'] = model['input']['data'].T @ gradient
+            model['layers'][i]['gradients']['weights'] = model['input']['train_data'].T @ gradient
         else:
             model['layers'][i]['gradients']['weights'] = model['layers'][i - 1]['result'].T @ gradient
         model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
@@ -297,13 +319,11 @@ def train(model: dict):
     for i in range(model['epoch']):
         print(f"Epoch {i + 1:0{epoch_len}d}/{model['epoch']:0{epoch_len}d} - "
               , end="")
-        feed_forward(model, inputs=model['input']['data'])
+        feed_forward(model)
         backpropagation(model)
         update_weights(model)
-        print(f"loss: {np.mean(model['output']['loss']):.6f}")
-        # feed_forward(model, inputs=model['data_test']
-        #              [model['input']['features']].to_numpy())
-        print(f"val_loss: {np.mean(model['output']['loss']):.6f}")
+        print(f"loss: {np.mean(model['output']['train_loss']):.6f} - "
+              f"val_loss: {np.mean(model['output']['test_loss']):.6f}")
 
 
 def main(args):

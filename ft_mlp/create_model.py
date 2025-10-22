@@ -41,14 +41,14 @@ def init_model_template() -> dict:
             'input': {
                 'features': [],
                 'shape': None,
-                'data': None
+                'train_data': None,
+                'test_data': None
                 },        # Input layer configuration
             'layers': [],         # List of hidden layer configurations
             'output': {
                 'shape': None,
                 'activation': None,
-                'weight_init': None,
-                'loss': None
+                'weight_init': None
                 }          # Output layer configuration
             }
     return model
@@ -167,7 +167,8 @@ def fill_model_datasets(
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
             standardized_data, ratio=training_rate, seed=seed)
-    model['input']['data'] = model['data_train'][features].to_numpy()
+    model['input']['train_data'] = model['data_train'][features].to_numpy()
+    model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
     model['output']['weight_init'] = he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()
