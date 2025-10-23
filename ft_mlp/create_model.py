@@ -13,6 +13,7 @@ FUNCTION_MAP = {
         'heUniform': he_initialisation
         }
 
+
 FUNCTION_NAME = {
         sigmoid: 'sigmoid',
         softmax: 'softmax',
@@ -46,16 +47,16 @@ def init_model_template() -> dict:
             'data_train': None,
             'data_test': None,
             'input': {
-                'features': [],
+                # 'features': [],
                 'shape': None,
-                'train_data': None,
-                'test_data': None
+                # 'train_data': None,
+                # 'test_data': None
                 },        # Input layer configuration
             'layers': [],         # List of hidden layer configurations
             'output': {
                 'shape': None,
                 'activation': None,
-                'weight_init': None
+                'weights_initializer': None
                 }          # Output layer configuration
             }
     return model
@@ -79,8 +80,8 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
             'shape': shape,
             'activation': (activation if activation is not None
                            else sigmoid),
-            'weight_init': (weight_init if weight_init is not None
-                            else he_initialisation),
+            'weight_initializer': (weight_init if weight_init is not None
+                                   else he_initialisation),
             'derivative': (DERIVATIVE_MAP[activation] if activation
                            is not None and activation in DERIVATIVE_MAP
                            else sigmoid_derivative)
@@ -99,14 +100,30 @@ def fill_model_from_json(model: dict, config_file) -> dict:
       dict: Model Parameters populated from JSON configuration
     """
     conf = json.load(config_file)
-    for k, _ in model.items():
+    simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs']
+    input_keys = model['input'].keys()
+    layer_keys = model['output'].keys()
+    function_keys = ['activation', 'weights_initializer', 'loss']
+    for k, _ in conf.items():
         if k in conf and conf[k] is not None:
-            if k not in ['input', 'output', 'layers']:
-                model[k] = conf[k]
-            elif k in ['input', 'output']:
-                model[k] = {sub_k: val for sub_k, val in conf[k].items()}
-            else:
-                model[k] = [{sub_k: val for sub_k, val in layer.items()}
+            if k in simple_keys:
+                model[k] = (conf[k] if k not in function_keys
+                            else FUNCTION_MAP[conf[k]])
+            elif k == 'input':
+                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                                    else val)
+                            for sub_k, val in conf[k].items()
+                            if sub_k in input_keys}
+            elif k == 'output':
+                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                                    else val)
+                            for sub_k, val in conf[k].items() if sub_k
+                            in layer_keys}
+            else:  # output or layers
+                model[k] = [{sub_k: (FUNCTION_MAP[val] if sub_k
+                                     in function_keys else val)
+                            for sub_k, val in layer.items() if sub_k
+                             in layer_keys}
                             for layer in conf[k]]
     return model
 
@@ -126,7 +143,7 @@ def fill_model_from_param(args, model: dict) -> dict:
     for key, _ in model.items():
         if key == 'loss':
             model[key] = (FUNCTION_MAP[args_dict[key]] if args_dict[key]
-                          is not None else None)
+                          is not None else model[key])
             continue
         model[key] = (args_dict[key] if key in args_dict
                       and args_dict[key] is not None
@@ -136,7 +153,7 @@ def fill_model_from_param(args, model: dict) -> dict:
         model['layers'] = [{
             'shape': n,
             'activation': sigmoid,
-            'weight_init': he_initialisation
+            'weights_initializer': he_initialisation
             } for n in args.shape]
     # Fill model from args.features
     if args.features is not None:
@@ -177,7 +194,6 @@ def fill_model_datasets(
     model['input']['train_data'] = model['data_train'][features].to_numpy()
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
-    model['output']['weight_init'] = he_initialisation
     model['output']['shape'] = filtered_df[target].nunique()
     return model
 

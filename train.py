@@ -93,7 +93,7 @@ def parse_args():
     parser.add_argument("--seed", "-s", type=int,
                         help="Seed to make model reproducible")
     parser.add_argument("--train_ratio", "-tr", type=float,
-                        # default=0.8,
+                        default=0.8,
                         help="The part of the dataset used as the training "
                              "set. (validation set ratio = 1 - train_ratio)")
     parser.add_argument("--outfile", "-of", type=ap.FileType('w'),
@@ -458,6 +458,7 @@ def save_model(filename: str, model: dict):
 def main(args):
     """Train the model"""
     model = ft_mlp.create_model(args, TARGET, FEATURES)
+    print(json.dumps(model, indent=4, cls=FunctionEncoder))
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias
     train(model)
