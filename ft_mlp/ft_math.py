@@ -254,7 +254,7 @@ def ft_argmax(array: np.ndarray) -> np.ndarray:
     Returns:
       np.ndarray: Indices of the maximum values.
     """
-    result = np.zeros(array.shape[0],int)
+    result = np.zeros(array.shape[0], int)
     for line_index, line in enumerate(array):
         max_index = 0
         max_val = line[max_index]

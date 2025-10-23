@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import json as json
 import ft_mlp as ft_mlp
+import matplotlib.pyplot as plt
 
 from types import FunctionType
 
@@ -356,24 +357,55 @@ def train(model: dict):
               f"val_loss: {np.mean(model['output']['test_loss'][i]):.6f}")
 
 
-# def plot_loss_cuve(train_loss: np.ndarray, test_loss: np.ndarray):
-#     """Plot loss curve for training and validation set
-#
-#     Parameters:
-#       train_loss (np.ndarray): Training loss values
-#       test_loss (np.ndarray): Validation loss values
-#     """
-    
+def plot_loss_and_accuracy_curves(model: dict):
+    """Plot loss curve  and accuracy for training and validation set
+
+    Parameters:
+      model (dict): Model parameters to use for plotting
+    """
+    train_loss = np.sum(model['output']['train_loss'], axis=1) \
+        / len(model['data_train'])
+    test_loss = np.sum(model['output']['test_loss'], axis=1) \
+        / len(model['data_test'])
+    print(f"len train_loss: {len(train_loss)}")
+    train_acc = model['output']['train_acc']
+    test_acc = model['output']['test_acc']
+
+    # print(train_loss)
+
+    # Create a figure and a 1x2 grid of subplots (1 row, 2 columns)
+    # 'figsize' is optional, but good for controlling the size of the figure
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Plot on the first subplot (left one)
+    axes[0].plot(train_loss, color='blue', label='Training loss')
+    axes[0].plot(test_loss, color='orange', linestyle='-', label='Test loss')
+    axes[0].set_title('Loss')
+    axes[0].set_xlabel('epochs')
+    axes[0].set_ylabel('loss')
+    axes[0].legend()
+
+    # Plot on the second subplot (right one)
+    axes[1].plot(train_acc, color='blue', label='Training accuracy')
+    axes[1].plot(test_acc, color='orange', linestyle='-',
+                 label='Test accuracy')
+    axes[1].set_title('Accuracy')
+    axes[1].set_xlabel('epoch')
+    axes[1].set_ylabel('accuracy')
+    axes[1].legend()
+
+    plt.get_current_fig_manager().full_screen_toggle()
+    plt.show()
 
 
 def main(args):
     """Train the model"""
     model = ft_mlp.create_model(args, TARGET, FEATURES)
     check_model(model)  # Validate model inputs
-
     init_model(model)  # Init model weights and bias
-
     train(model)
+
+    plot_loss_and_accuracy_curves(model)
     print("Good exit")
     return
 
