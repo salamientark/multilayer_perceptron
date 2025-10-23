@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
 from .ft_math import ft_mean, ft_std
+from .network_layers import sigmoid, softmax
+from .loss_functions import categorical_cross_entropy
 from random import seed, randrange
 from sys import maxsize
+from json import dump
 
 
 def get_random_seed() -> int:
@@ -104,3 +107,104 @@ def save_thetas(thetas: dict, features: list) -> None:
         f.write("Class,Bias," + ",".join(features) + "\n")
         for cls, theta in thetas.items():
             f.write(cls + "," + ",".join([str(t) for t in theta]) + "\n")
+
+
+def save_weights(filename: str, model: dict):
+    """Save model weights to a npz file
+
+    npz file are numpy compressed files containing arrays.
+
+    Parameters:
+      filename (str): Output filename
+      model (dict): Model parameters to save
+    """
+    weights = {}
+    for i, layer in enumerate(model['layers']):
+        weights[f'layer_{i}_weights'] = layer['weights']
+        weights[f'layer_{i}_bias'] = layer['bias']
+    weights['output_weights'] = model['output']['weights']
+    weights['output_bias'] = model['output']['bias']
+    np.savez(filename, **weights)
+
+
+def save_model(filename: str, model: dict):
+    """Save model to a json file
+
+    Parameters:
+      filename (str): Output filename
+      model (dict): Model parameters to save
+    """
+    model_template = {}
+
+    model_template['epoch'] = model['epoch']
+    model_template['alpha'] = model['alpha']
+    model_template['batch'] = model['batch']
+    model_template['loss'] = FUNCTION_NAME[model['loss']]
+    model_template['seed'] = model['seed']
+
+    model_template['input'] = {}
+    model_template['input']['shape'] = model['input']['shape']
+
+    model_template['layers'] = []
+    for layer in model['layers']:
+        filtered_layer = {}
+        filtered_layer['shape'] = layer['shape']
+        filtered_layer['activation'] = FUNCTION_NAME[
+                layer['activation']]
+        filtered_layer['weights_initializer'] = FUNCTION_NAME[
+                layer['weights_initializer']]
+        model_template['layers'].append(filtered_layer.copy())
+
+    model_template['output'] = {}
+    model_template['output']['shape'] = model['output']['shape']
+    model_template['output']['activation'] = FUNCTION_NAME[
+            model['output']['activation']]
+    model_template['output']['weights_initializer'] = \
+        FUNCTION_NAME[model['output']['weights_initializer']]
+
+    with open(filename, 'w') as f:
+        dump(model_template, f, indent=4)
+
+
+def calculate_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
+    """Calculate accuracy of predictions
+
+    Parameters:
+      predictions (np.ndarray): Model predictions
+      truth (np.ndarray): Ground truth labels
+
+    Returns:
+      float: Accuracy value
+    """
+    prediction_indexes = np.argmax(predictions, axis=1)
+    truth_indexes = np.argmax(truth, axis=1)
+    good_prediction = (prediction_indexes == truth_indexes)
+    accuracy = np.sum(good_prediction) / len(good_prediction)
+    return accuracy
+
+
+def calculate_loss(
+        predictions: np.ndarray,
+        truth: np.ndarray,
+        loss) -> np.ndarray:
+    """Calculate loss for given predictions and truth
+
+    Calculate loss for each inputs so loss can be averaged later.
+
+    Parameters:
+      predictions (np.ndarray): Model predictions
+      truth (np.ndarray): Ground truth labels
+      loss (function): Loss function to use
+
+    Returns:
+      np.ndarray: Loss for each input
+    """
+    return loss(predictions, truth)
+
+
+FUNCTION_NAME = {
+        sigmoid: 'sigmoid',
+        softmax: 'softmax',
+        categorical_cross_entropy: 'categoricalCrossentropy',
+        he_initialisation: 'heUniform'
+        }

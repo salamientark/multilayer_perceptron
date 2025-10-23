@@ -3,7 +3,7 @@ from .analysis import ( # noqa
         ft_shape,
         correlation_matrix
         )
-from .create_model import create_model, FUNCTION_NAME # noqa
+from .create_model import create_model  # noqa
 from .ft_math import ( # noqa
         ft_isnbr,
         ft_mean,
@@ -28,7 +28,12 @@ from .model_utils import ( # noqa
         init_weights_zero,
         he_initialisation,
         unstandardized_thetas,
-        save_thetas
+        save_thetas,
+        save_weights,
+        save_model,
+        calculate_loss,
+        calculate_accuracy,
+        FUNCTION_NAME
         )
 from .network_layers import ( # noqa
         score_function,
