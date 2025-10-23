@@ -190,7 +190,7 @@ def check_model(model: dict):
                             "initialization.")
 
 
-def calculte_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
+def calculate_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
     """Calculate accuracy of predictions
 
     Parameters:
@@ -233,63 +233,48 @@ def init_model(model: dict) -> dict:
                 seed, data_inputs
             )
     model['output']['gradients'] = {}
-    model['output']['train_result'] = None
-    model['output']['test_result'] = None
-    model['output']['train_truth'] = ft_mlp.one_encoding(model['data_train'],
-                                                         TARGET)
-    model['output']['test_truth'] = ft_mlp.one_encoding(model['data_test'],
-                                                        TARGET)
-    model['output']['train_loss'] = []
-    model['output']['test_loss'] = []
-    model['output']['train_acc'] = []
-    model['output']['test_acc'] = []
+    model['output']['result'] = None
+    # model['output']['test_result'] = None
+    model['train_truth'] = ft_mlp.one_encoding(model['data_train'],
+                                               TARGET)
+    model['test_truth'] = ft_mlp.one_encoding(model['data_test'],
+                                              TARGET)
+    model['train_loss'] = np.zeros((model['epoch'], len(model['data_train'])))
+    model['test_loss'] = np.zeros((model['epoch'], len(model['data_test'])))
+    model['train_acc'] = np.zeros(model['epoch'])
+    model['test_acc'] = np.zeros(model['epoch'])
     return model
 
 
 def feed_forward(model: dict):
-    """Perform feed forwrd pass in the mlp
+    """Perform feed forward pass in the mlp
 
     Used in training calculate result for each layer
+    and saves it directly to model
 
     Parameters:
       model (dict): Model parameters to use for feed forward pass
     """
     train_inputs = model['input']['train_data']
-    test_inputs = model['input']['test_data']
     for layer in model['layers']:
         layer['result'] = ft_mlp.hidden_layer(
                 train_inputs, layer['weights'],
                 layer['bias'],
                 activation=layer['activation'])
         train_inputs = layer['result']
-        test_result = ft_mlp.hidden_layer(
-                test_inputs, layer['weights'],
-                layer['bias'],
-                activation=layer['activation'])
-        test_inputs = test_result
     train_predictions = ft_mlp.hidden_layer(
                 train_inputs, model['output']['weights'],
                 model['output']['bias'],
                 activation=model['output']['activation'])
-    test_predictions = ft_mlp.hidden_layer(
-                test_inputs, model['output']['weights'],
-                model['output']['bias'],
-                activation=model['output']['activation'])
+    model['output']['result'] = train_predictions
 
     # Update model
-    train_truth = model['output']['train_truth']
-    test_truth = model['output']['test_truth']
-    model['output']['result'] = train_predictions
-    model['output']['train_loss'].append(model['loss'](
-            train_predictions,
-            model['output']['train_truth']))
-    model['output']['test_loss'].append(model['loss'](
-            test_predictions,
-            model['output']['test_truth']))
-    model['output']['test_acc'].append(
-            calculte_accuracy(train_predictions, train_truth))
-    model['output']['train_acc'].append(
-            calculte_accuracy(test_predictions, test_truth))
+    # train_truth = model['train_truth']
+    # model['train_loss'].append(model['loss'](
+    #         train_predictions,
+    #         model['train_truth']))
+    # model['test_acc'].append(
+    #         calculate_accuracy(train_predictions, train_truth))
 
 
 def backpropagation(model: dict):
@@ -302,7 +287,7 @@ def backpropagation(model: dict):
       model (dict): Model parameters to use for backpropagation
     """
     predictions = model['output']['result']
-    truth = model['output']['train_truth']
+    truth = model['train_truth']
     gradient = predictions - truth  # Partial derivative (Crossentropy/softmax)
     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
     gradient_bias_out = np.sum(gradient, axis=0)
@@ -339,6 +324,76 @@ def update_weights(model: dict):
         model['output']['gradients']['bias']
 
 
+def predict(model: dict, inputs: np.ndarray) -> np.ndarray:
+    """Predict output for given inputs
+
+    Used to just calculate the output of the model for given inputs.
+    DO NOT USE as feed forward pass
+
+    Parameters:
+      model (dict): Model parameters to use for prediction
+      inputs (np.ndarray): Input data to predict
+
+    Returns:
+      np.ndarray: Model predictions
+    """
+    layer_inputs = np.copy(inputs)
+    result = None
+
+    # Hidden layer calculation
+    for hidden_layer in model['layers']:
+        result = ft_mlp.hidden_layer(
+                layer_inputs, hidden_layer['weights'],
+                hidden_layer['bias'],
+                activation=hidden_layer['activation'])
+        layer_inputs = result
+
+    # Ouput layer calculation
+    output_layer = model['output']
+    result = ft_mlp.hidden_layer(
+            layer_inputs, output_layer['weights'],
+            output_layer['bias'],
+            activation=output_layer['activation'])
+    return result
+
+
+def calculate_loss(
+        predictions: np.ndarray,
+        truth: np.ndarray,
+        loss: FunctionType) -> np.ndarray:
+    """Calculate loss for given predictions and truth
+
+    Calculate loss for each inputs so loss can be averaged later.
+
+    Parameters:
+      predictions (np.ndarray): Model predictions
+      truth (np.ndarray): Ground truth labels
+      loss (FunctionType): Loss function to use
+
+    Returns:
+      np.ndarray: Loss for each input
+    """
+    return loss(predictions, truth)
+
+
+def print_training_state(epoch: int, model: dict):
+    """Print training state for given epoch
+
+    Parameters:
+      epoch (int): Current epoch number
+      model (dict): Model parameters to use for printing
+    """
+    epoch_len = len(str(model['epoch']))
+    total_epoch = model['epoch']
+    train_loss = model['train_loss']
+    test_loss = model['test_loss']
+    train_loss_mean = np.sum(train_loss[epoch]) / train_loss.shape[0]
+    test_loss_mean = np.sum(test_loss[epoch]) / test_loss.shape[0]
+    print(f"Epoch {epoch + 1:0{epoch_len}d}/{total_epoch:0{epoch_len}d} - "
+          f"loss: {train_loss_mean:.6f} - "
+          f"val_loss: {test_loss_mean:.6f}")
+
+
 def train(model: dict):
     """Perform the training of the model
 
@@ -346,17 +401,40 @@ def train(model: dict):
       model (dict): Model parameters to train
     """
     # Print param
-    epoch_len = len(str(model['epoch']))
     print("data_train shape:", model['data_train'].shape)
     print("data_validation shape:", model['data_test'].shape)
+
+    loss = model['loss']
     for i in range(model['epoch']):
-        print(f"Epoch {i + 1:0{epoch_len}d}/{model['epoch']:0{epoch_len}d} - ",
-              end="")
         feed_forward(model)
+
+        # Train loss and accuracy
+        train_predictions = model['output']['result']
+        train_truth = model['train_truth']
+        model['train_loss'][i] = calculate_loss(
+                train_predictions,
+                train_truth,
+                loss)
+        model['train_acc'][i] = calculate_accuracy(
+                train_predictions,
+                train_truth)
+
+        # Test loss
+        features = model['input']['features']
+        test_predictions = predict(model, model['data_test'][features])
+        # test_predictions = model['result']
+        test_truth = model['test_truth']
+        model['test_loss'][i] = calculate_loss(
+                test_predictions,
+                test_truth,
+                loss)
+        model['test_acc'][i] = calculate_accuracy(
+                test_predictions,
+                test_truth)
+
         backpropagation(model)
         update_weights(model)
-        print(f"loss: {np.mean(model['output']['train_loss'][i]):.6f} - "
-              f"val_loss: {np.mean(model['output']['test_loss'][i]):.6f}")
+        print_training_state(i, model)
 
 
 def plot_loss_and_accuracy_curves(model: dict):
@@ -365,15 +443,12 @@ def plot_loss_and_accuracy_curves(model: dict):
     Parameters:
       model (dict): Model parameters to use for plotting
     """
-    train_loss = np.sum(model['output']['train_loss'], axis=1) \
+    train_loss = np.sum(model['train_loss'], axis=1) \
         / len(model['data_train'])
-    test_loss = np.sum(model['output']['test_loss'], axis=1) \
+    test_loss = np.sum(model['test_loss'], axis=1) \
         / len(model['data_test'])
-    print(f"len train_loss: {len(train_loss)}")
-    train_acc = model['output']['train_acc']
-    test_acc = model['output']['test_acc']
-
-    # print(train_loss)
+    train_acc = model['train_acc']
+    test_acc = model['test_acc']
 
     # Create a figure and a 1x2 grid of subplots (1 row, 2 columns)
     # 'figsize' is optional, but good for controlling the size of the figure
@@ -461,7 +536,6 @@ def main(args):
     """Train the model"""
     model = ft_mlp.create_model(args, TARGET, FEATURES)
     check_model(model)  # Validate model inputs
-    print(json.dumps(model, indent=4, cls=FunctionEncoder))
     init_model(model)  # Init model weights and bias
     train(model)
     save_weights("weights.npz", model)

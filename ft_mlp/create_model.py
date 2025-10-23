@@ -209,7 +209,7 @@ def create_model(args, target: str, features: list = []):
         model = fill_model_from_json(model, args.conf)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
-                                args.seed, target, features)
+                                model['seed'], target, features)
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']

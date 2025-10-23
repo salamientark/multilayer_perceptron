@@ -7,7 +7,7 @@
   - [x] Display accuracy curves (training vs validation)
 - [x] Implement weight and model saving (JSON format)
 - [x] Rework the train.py inputs to fit new model signature
-- [ ] Rework feedfoward function to make it pure
+- [ ] Rework model template for better readability (losses and accuracy)
 - [ ] Add ability to change optimizer function
   - [ ] Batch gradient descent
   - [ ] Mini-batch gradient descent
