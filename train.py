@@ -398,12 +398,31 @@ def plot_loss_and_accuracy_curves(model: dict):
     plt.show()
 
 
+def save_weights(filename: str, model: dict):
+    """Save model weights to a npz file
+
+    npz file are numpy compressed files containing arrays.
+
+    Parameters:
+      filename (str): Output filename
+      model (dict): Model parameters to save
+    """
+    weights = {}
+    for i, layer in enumerate(model['layers']):
+        weights[f'layer_{i}_weights'] = model['layers'][i]['weights']
+        weights[f'layer_{i}_bias'] = model['layers'][i]['bias']
+    weights['output_weights'] = model['output']['weights']
+    weights['output_bias'] = model['output']['bias']
+    np.savez(filename, **weights)
+
+
 def main(args):
     """Train the model"""
     model = ft_mlp.create_model(args, TARGET, FEATURES)
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias
     train(model)
+    save_weights("weights.npz", model)
 
     plot_loss_and_accuracy_curves(model)
     print("Good exit")
