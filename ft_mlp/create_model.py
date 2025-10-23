@@ -13,6 +13,13 @@ FUNCTION_MAP = {
         'heUniform': he_initialisation
         }
 
+FUNCTION_NAME = {
+        sigmoid: 'sigmoid',
+        softmax: 'softmax',
+        categorical_cross_entropy: 'categoricalCrossentropy',
+        he_initialisation: 'heUniform'
+        }
+
 
 DERIVATIVE_MAP = {
         sigmoid: sigmoid_derivative

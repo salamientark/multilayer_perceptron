@@ -409,11 +409,50 @@ def save_weights(filename: str, model: dict):
     """
     weights = {}
     for i, layer in enumerate(model['layers']):
-        weights[f'layer_{i}_weights'] = model['layers'][i]['weights']
-        weights[f'layer_{i}_bias'] = model['layers'][i]['bias']
+        weights[f'layer_{i}_weights'] = layer['weights']
+        weights[f'layer_{i}_bias'] = layer['bias']
     weights['output_weights'] = model['output']['weights']
     weights['output_bias'] = model['output']['bias']
     np.savez(filename, **weights)
+
+
+def save_model(filename: str, model: dict):
+    """Save model to a json file
+
+    Parameters:
+      filename (str): Output filename
+      model (dict): Model parameters to save
+    """
+    model_template = {}
+
+    model_template['epoch'] = model['epoch']
+    model_template['alpha'] = model['alpha']
+    model_template['batch'] = model['batch']
+    model_template['loss'] = ft_mlp.FUNCTION_NAME[model['loss']]
+    model_template['seed'] = model['seed']
+
+    model_template['input'] = {}
+    model_template['input']['shape'] = model['input']['shape']
+
+    model_template['layers'] = []
+    for layer in model['layers']:
+        filtered_layer = {}
+        filtered_layer['shape'] = layer['shape']
+        filtered_layer['activation'] = ft_mlp.FUNCTION_NAME[
+                layer['activation']]
+        filtered_layer['weights_initializer'] = ft_mlp.FUNCTION_NAME[
+                layer['weight_init']]
+        model_template['layers'].append(filtered_layer.copy())
+
+    model_template['output'] = {}
+    model_template['output']['shape'] = model['output']['shape']
+    model_template['output']['activation'] = ft_mlp.FUNCTION_NAME[
+            model['output']['activation']]
+    model_template['output']['weights_initializer'] = \
+        ft_mlp.FUNCTION_NAME[model['output']['weight_init']]
+
+    with open(filename, 'w') as f:
+        json.dump(model_template, f, indent=4)
 
 
 def main(args):
@@ -423,9 +462,9 @@ def main(args):
     init_model(model)  # Init model weights and bias
     train(model)
     save_weights("weights.npz", model)
+    save_model("trained_model.json", model)
 
     plot_loss_and_accuracy_curves(model)
-    print("Good exit")
     return
 
 

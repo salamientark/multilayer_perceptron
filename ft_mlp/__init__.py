@@ -3,7 +3,7 @@ from .analysis import ( # noqa
         ft_shape,
         correlation_matrix
         )
-from .create_model import create_model # noqa
+from .create_model import create_model, FUNCTION_NAME # noqa
 from .ft_math import ( # noqa
         ft_isnbr,
         ft_mean,
