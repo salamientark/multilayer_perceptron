@@ -24,12 +24,6 @@ class FunctionEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-# COLORS
-RED = '\033[91m'
-GREEN = '\033[92m'
-RESET = '\033[0m'
-
-
 # DEFAULT VALUES
 FEATURES = [
         'radius_mean', 'texture_mean', 'perimeter_mean',
@@ -450,4 +444,4 @@ if __name__ == "__main__":
         validate_args(args)
         main(args)
     except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")

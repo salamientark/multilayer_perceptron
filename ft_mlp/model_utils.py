@@ -3,6 +3,7 @@ import pandas as pd
 from .ft_math import ft_mean, ft_std
 from .network_layers import sigmoid, softmax
 from .loss_functions import categorical_cross_entropy
+from .colors import BLUE, GREEN, RESET
 from random import seed, randrange
 from sys import maxsize
 from json import dump
@@ -124,7 +125,9 @@ def save_weights(filename: str, model: dict):
         weights[f'layer_{i}_bias'] = layer['bias']
     weights['output_weights'] = model['output']['weights']
     weights['output_bias'] = model['output']['bias']
+    print(f"Saving weights to {BLUE}{filename}{RESET}... ", end="")
     np.savez(filename, **weights)
+    print(f"{GREEN}Success{RESET}")
 
 
 def save_model(filename: str, model: dict):
@@ -162,8 +165,10 @@ def save_model(filename: str, model: dict):
     model_template['output']['weights_initializer'] = \
         FUNCTION_NAME[model['output']['weights_initializer']]
 
+    print(f"Saving model to {BLUE}{filename}{RESET}... ", end="")
     with open(filename, 'w') as f:
         dump(model_template, f, indent=4)
+    print(f"{GREEN}Success{RESET}")
 
 
 def calculate_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:

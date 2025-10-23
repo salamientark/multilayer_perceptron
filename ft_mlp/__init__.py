@@ -61,3 +61,9 @@ from .preprocessing import ( # noqa
         standardize_df,
         split_dataset
         )
+from .colors import ( # noqa
+        RED,
+        GREEN,
+        RESET,
+        BLUE
+        )
