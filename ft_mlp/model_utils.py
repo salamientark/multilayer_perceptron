@@ -6,7 +6,33 @@ from .loss_functions import categorical_cross_entropy
 from .colors import BLUE, GREEN, RESET
 from random import seed, randrange
 from sys import maxsize
-from json import dump
+from json import dump, dumps, JSONEncoder
+from types import FunctionType
+
+
+class FunctionEncoder(JSONEncoder):
+    """Custom JSON encoder to handle function objects."""
+    def default(self, o):
+        if callable(o):
+            return o.__name__
+        elif isinstance(o, FunctionType):
+            return o.__name__
+        elif isinstance(o, pd.DataFrame):
+            return o.shape
+        elif isinstance(o, np.ndarray):
+            return o.shape
+        elif isinstance(o, pd.Series):
+            return o.shape
+        return JSONEncoder.default(self, o)
+
+
+def print_model(model: dict) -> None:
+    """Print model summary to the console
+
+    Parameters:
+      model (dict): Model parameters
+    """
+    print(dumps(model, indent=4, cls=FunctionEncoder))
 
 
 def get_random_seed() -> int:
@@ -144,6 +170,7 @@ def save_model(filename: str, model: dict):
     model_template['batch'] = model['batch']
     model_template['loss'] = FUNCTION_NAME[model['loss']]
     model_template['seed'] = model['seed']
+    model_template['optimizer'] = model['optimizer']
 
     model_template['input'] = {}
     model_template['input']['shape'] = model['input']['shape']

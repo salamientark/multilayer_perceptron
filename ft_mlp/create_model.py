@@ -38,6 +38,7 @@ def init_model_template() -> dict:
             'seed': None,
             'data_train': None,
             'data_test': None,
+            'optimizer': None,
             'input': {
                 # 'features': [],
                 'shape': None,
@@ -92,7 +93,8 @@ def fill_model_from_json(model: dict, config_file) -> dict:
       dict: Model Parameters populated from JSON configuration
     """
     conf = json.load(config_file)
-    simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs']
+    simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs',
+                   'optimizer']
     input_keys = model['input'].keys()
     layer_keys = model['output'].keys()
     function_keys = ['activation', 'weights_initializer', 'loss']
@@ -205,6 +207,8 @@ def create_model(args, target: str, features: list = []):
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
+    model['optimizer'] = ('mini-batch' if model['batch'] is not None
+                          else 'stochastic')
     # Set derivatives for each layer
     for layer in model['layers']:
         layer['derivative'] = DERIVATIVE_MAP[layer['activation']]

@@ -33,6 +33,7 @@ from .model_utils import ( # noqa
         save_model,
         calculate_loss,
         calculate_accuracy,
+        print_model,
         FUNCTION_NAME
         )
 from .network_layers import ( # noqa

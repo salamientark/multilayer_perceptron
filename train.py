@@ -1,27 +1,7 @@
 import argparse as ap
 import numpy as np
-import pandas as pd
-import json as json
 import ft_mlp as ft_mlp
 import matplotlib.pyplot as plt
-
-from types import FunctionType
-
-
-class FunctionEncoder(json.JSONEncoder):
-    """Custom JSON encoder to handle function objects."""
-    def default(self, o):
-        if callable(o):
-            return o.__name__
-        elif isinstance(o, FunctionType):
-            return o.__name__
-        elif isinstance(o, pd.DataFrame):
-            return o.shape
-        elif isinstance(o, np.ndarray):
-            return o.shape
-        elif isinstance(o, pd.Series):
-            return o.shape
-        return json.JSONEncoder.default(self, o)
 
 
 # DEFAULT VALUES
@@ -43,7 +23,6 @@ TARGET = 'diagnosis'
 def print_weights(model: dict):
     for i, layer in enumerate(model['layers']):
         print(f"Layer {i + 1} weights:{layer['weights']}")
-        # print(f"Layer {i + 1} type:{type(layer['weights'])}")
 
 
 def parse_args():
@@ -154,6 +133,9 @@ def check_model(model: dict):
         raise Exception("Seed must be a positive integer.")
     if model['data_train'] is None or model['data_test'] is None:
         raise Exception("Training and validation datasets must be provided.")
+    if model['optimizer'] is None or model['optimizer'] not in \
+            ['mini-batch', 'stochastic']:
+        raise Exception("Optimizer must be mini-batch or stochastic.")
     if model['input']['shape'] is None or model['input']['shape'] <= 0:
         raise Exception("Input layer must have a positive number of neurons.")
     if (model['input']['features'] is None
@@ -372,7 +354,6 @@ def train(model: dict):
         # Test loss
         features = model['input']['features']
         test_predictions = predict(model, model['data_test'][features])
-        # test_predictions = model['result']
         test_truth = model['test_truth']
         model['test_loss'][i] = ft_mlp.calculate_loss(
                 test_predictions,
@@ -435,6 +416,7 @@ def main(args):
     ft_mlp.save_model("trained_model.json", model)
 
     plot_loss_and_accuracy_curves(model)
+    ft_mlp.print_model(model)
     return
 
 
