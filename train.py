@@ -170,8 +170,9 @@ def check_model(model: dict):
     if (model['output']['activation'] is None or model['output']['activation']
             is not ft_mlp.softmax):
         raise Exception("Output layer activation must be softmax.")
-    if (model['output']['weight_init'] is None or
-            model['output']['weight_init'] is not ft_mlp.he_initialisation):
+    if (model['output']['weights_initializer'] is None or
+            model['output']['weights_initializer']
+            is not ft_mlp.he_initialisation):
         raise Exception("Output layer weight initialization must be zero "
                         "initialization.")
     for layer in model['layers']:
@@ -182,7 +183,8 @@ def check_model(model: dict):
                 or layer['activation'] is not ft_mlp.sigmoid):
             raise Exception("All hidden layers must use the sigmoid "
                             "activation function.")
-        if (layer['weight_init'] is None or layer['weight_init']
+        if (layer['weights_initializer'] is None
+            or layer['weights_initializer']
                 is not ft_mlp.he_initialisation):
             raise Exception("All hidden layers must use zero weight "
                             "initialization.")
@@ -219,14 +221,14 @@ def init_model(model: dict) -> dict:
     for i, layer in enumerate(model['layers']):
         layer['gradients'] = {}
         if i == 0:
-            layer['weights'], layer['bias'] = layer['weight_init'](
+            layer['weights'], layer['bias'] = layer['weights_initializer'](
                     model['input']['shape'], layer['shape'], seed, data_inputs)
             continue
-        layer['weights'], layer['bias'] = layer['weight_init'](
+        layer['weights'], layer['bias'] = layer['weights_initializer'](
                 model['layers'][i - 1]['shape'], layer['shape'], seed,
                 data_inputs)
     model['output']['weights'], model['output']['bias'] = \
-        model['output']['weight_init'](
+        model['output']['weights_initializer'](
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
@@ -441,7 +443,7 @@ def save_model(filename: str, model: dict):
         filtered_layer['activation'] = ft_mlp.FUNCTION_NAME[
                 layer['activation']]
         filtered_layer['weights_initializer'] = ft_mlp.FUNCTION_NAME[
-                layer['weight_init']]
+                layer['weights_initializer']]
         model_template['layers'].append(filtered_layer.copy())
 
     model_template['output'] = {}
@@ -449,7 +451,7 @@ def save_model(filename: str, model: dict):
     model_template['output']['activation'] = ft_mlp.FUNCTION_NAME[
             model['output']['activation']]
     model_template['output']['weights_initializer'] = \
-        ft_mlp.FUNCTION_NAME[model['output']['weight_init']]
+        ft_mlp.FUNCTION_NAME[model['output']['weights_initializer']]
 
     with open(filename, 'w') as f:
         json.dump(model_template, f, indent=4)
@@ -458,8 +460,8 @@ def save_model(filename: str, model: dict):
 def main(args):
     """Train the model"""
     model = ft_mlp.create_model(args, TARGET, FEATURES)
-    print(json.dumps(model, indent=4, cls=FunctionEncoder))
     check_model(model)  # Validate model inputs
+    print(json.dumps(model, indent=4, cls=FunctionEncoder))
     init_model(model)  # Init model weights and bias
     train(model)
     save_weights("weights.npz", model)
