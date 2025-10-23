@@ -45,6 +45,28 @@ def get_random_seed() -> int:
     return randrange(1, maxsize)
 
 
+def get_random_batch_indexes(
+        batch_size: int,
+        data_size: int,
+        seed: int | None = None) -> np.ndarray:
+    """Get random batch indexes for mini-batch gradient descent
+
+    Parameters:
+      batch_size (int): Size of the batch
+      data_size (int): Size of the dataset
+    seed (int) (optional) : Seed for random generator
+                            (train will use seed * actual epoch for
+                            reproducible results)
+
+    Returns:
+      np.ndarray: Random batch indexes
+    """
+    rng = np.random.default_rng() if seed is None \
+        else np.random.default_rng(seed)
+    permutated_indexes = rng.permutation(data_size)
+    return permutated_indexes[0: batch_size]
+
+
 def init_thetas(classes: list, feature_nbr: int) -> dict:
     """Initialize thetas dictionary with zeros
 

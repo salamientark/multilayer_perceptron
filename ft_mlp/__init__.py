@@ -34,6 +34,7 @@ from .model_utils import ( # noqa
         calculate_loss,
         calculate_accuracy,
         print_model,
+        get_random_batch_indexes,
         FUNCTION_NAME
         )
 from .network_layers import ( # noqa
