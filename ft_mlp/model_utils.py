@@ -46,13 +46,11 @@ def get_random_seed() -> int:
 
 
 def get_random_batch_indexes(
-        batch_size: int,
         data_size: int,
         seed: int | None = None) -> np.ndarray:
     """Get random batch indexes for mini-batch gradient descent
 
     Parameters:
-      batch_size (int): Size of the batch
       data_size (int): Size of the dataset
     seed (int) (optional) : Seed for random generator
                             (train will use seed * actual epoch for
@@ -64,7 +62,7 @@ def get_random_batch_indexes(
     rng = np.random.default_rng() if seed is None \
         else np.random.default_rng(seed)
     permutated_indexes = rng.permutation(data_size)
-    return permutated_indexes[0: batch_size]
+    return permutated_indexes
 
 
 def init_thetas(classes: list, feature_nbr: int) -> dict:
@@ -254,6 +252,26 @@ def calculate_loss(
       np.ndarray: Loss for each input
     """
     return loss(predictions, truth)
+
+
+def calculate_loss_mean(
+        predictions: np.ndarray,
+        truth: np.ndarray,
+        loss) -> float:
+    """Calculate loss mean for given predictions and truth
+
+    Calculate loss mean to show training progress.
+
+    Parameters:
+      predictions (np.ndarray): Model predictions
+      truth (np.ndarray): Ground truth labels
+      loss (function): Loss function to use
+
+    Returns:
+      float: Mean loss value
+    """
+    all_loss = loss(predictions, truth)
+    return np.sum(all_loss) / len(all_loss)
 
 
 FUNCTION_NAME = {

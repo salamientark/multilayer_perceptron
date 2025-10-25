@@ -32,6 +32,7 @@ from .model_utils import ( # noqa
         save_weights,
         save_model,
         calculate_loss,
+        calculate_loss_mean,
         calculate_accuracy,
         print_model,
         get_random_batch_indexes,

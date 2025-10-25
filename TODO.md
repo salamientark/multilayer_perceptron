@@ -8,6 +8,7 @@
 - [x] Implement weight and model saving (JSON format)
 - [x] Rework the train.py inputs to fit new model signature
 - [x] Rework model template for better readability (losses and accuracy)
+- [ ] Pure feedoforward function ? would allow for batching
 - [ ] Add ability to change optimizer function
   - [ ] Batch gradient descent
   - [ ] Mini-batch gradient descent
