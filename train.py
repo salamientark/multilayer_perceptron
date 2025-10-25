@@ -314,76 +314,6 @@ def update_weights(
     model['output']['bias'] -= alpha * gradients[-1][1]
 
 
-# def feed_forward(model: dict):
-#     """Perform feed forward pass in the mlp
-#
-#     Used in training calculate result for each layer
-#     and saves it directly to model
-#
-#     Parameters:
-#       model (dict): Model parameters to use for feed forward pass
-#     """
-#     train_inputs = model['input']['train_data']
-#     for layer in model['layers']:
-#         layer['result'] = ft_mlp.hidden_layer(
-#                 train_inputs, layer['weights'],
-#                 layer['bias'],
-#                 activation=layer['activation'])
-#         train_inputs = layer['result']
-#     train_predictions = ft_mlp.hidden_layer(
-#                 train_inputs, model['output']['weights'],
-#                 model['output']['bias'],
-#                 activation=model['output']['activation'])
-#     model['output']['result'] = train_predictions
-
-
-# def backpropagation(model: dict):
-#     """Perform backpropagation to compute gradients
-#
-#     Perform backpropagation to compute gradients for each layer in training
-#     process.
-#
-#     Parameters:
-#       model (dict): Model parameters to use for backpropagation
-#     """
-#     predictions = model['output']['result']
-#     truth = model['train_truth']
-#     gradient = predictions - truth  # Partial derivative (Crossentropy/softmax)
-#     gradient_weights_out = model['layers'][-1]['result'].T @ gradient
-#     gradient_bias_out = np.sum(gradient, axis=0)
-#     model['output']['gradients']['weights'] = gradient_weights_out
-#     model['output']['gradients']['bias'] = gradient_bias_out
-#     weights = model['output']['weights']
-#     for i in range(len(model['layers']) - 1, -1, -1):
-#         gradient = gradient @ weights.T
-#         gradient *= model['layers'][i]['derivative'](
-#                 model['layers'][i]['result'])
-#         if i == 0:
-#             model['layers'][i]['gradients']['weights'] = \
-#                 model['input']['train_data'].T @ gradient
-#         else:
-#             model['layers'][i]['gradients']['weights'] = \
-#                     model['layers'][i - 1]['result'].T @ gradient
-#         model['layers'][i]['gradients']['bias'] = np.sum(gradient, axis=0)
-#         weights = model['layers'][i]['weights']
-
-
-# def update_weights(model: dict):
-#     """Update model weights after training
-#
-#     Parameters:
-#       model (dict): Model parameters to update
-#     """
-#     alpha = model['alpha']
-#     for layer in model['layers']:
-#         layer['weights'] -= alpha * layer['gradients']['weights']
-#         layer['bias'] -= alpha * layer['gradients']['bias']
-#     model['output']['weights'] -= alpha * \
-#         model['output']['gradients']['weights']
-#     model['output']['bias'] -= alpha * \
-#         model['output']['gradients']['bias']
-
-
 def predict(model: dict, inputs: np.ndarray) -> np.ndarray:
     """Predict output for given inputs
 
@@ -444,10 +374,10 @@ def train(model: dict):
     # Print param
     print("data_train shape:", model['data_train'].shape)
     print("data_validation shape:", model['data_test'].shape)
-
     loss = model['loss']
+    features = model['input']['features']
     for i in range(model['epoch']):
-        # Batch handling TODO
+        # Batch handling
         batch_size = model['batch']
         batch_indexes = ft_mlp.get_random_batch_indexes(
                 model['data_train'].shape[0])
@@ -456,8 +386,7 @@ def train(model: dict):
         last_index = batch_size
         epoch_train_loss = 0.0
         epoch_train_acc = 0.0
-        epoch_test_loss = 0.0
-        epoch_test_acc = 0.0
+        # Train part
         while batch.size > 0:
             # Init
             inputs = model['input']['train_data'][batch]
@@ -483,39 +412,16 @@ def train(model: dict):
         model['train_loss'][i] = epoch_train_loss / total_batch
         model['train_acc'][i] = epoch_train_acc / total_batch
 
-        # -----
-
-        # features = model['input']['features']
-        # inputs = model['input']['train_data']
-        # truth  = model['train_truth']
-        # result = feed_forward(model, inputs)
-        #
-        #
-        #
-        # # Train loss and accuracy
-        # # train_predictions = model['output']['result']
-        # # train_truth = model['train_truth']
-        # model['train_loss'][i] = ft_mlp.calculate_loss(
-        #         result[-1],
-        #         truth,
-        #         loss)
-        # model['train_acc'][i] = ft_mlp.calculate_accuracy(
-        #         result[-1],
-        #         truth)
-        #
-        # gradients = backpropagation(model, inputs, result, truth)
-        # update_weights(model, gradients)
-        #
-        # # Test loss
-        # test_predictions = predict(model, model['data_test'][features])
-        # test_truth = model['test_truth']
-        # model['test_loss'][i] = ft_mlp.calculate_loss(
-        #         test_predictions,
-        #         test_truth,
-        #         loss)
-        # model['test_acc'][i] = ft_mlp.calculate_accuracy(
-        #         test_predictions,
-        #         test_truth)
+        # Validation
+        test_predictions = predict(model, model['data_test'][features])
+        test_truth = model['test_truth']
+        model['test_loss'][i] = ft_mlp.calculate_loss(
+                test_predictions,
+                test_truth,
+                loss)
+        model['test_acc'][i] = ft_mlp.calculate_accuracy(
+                test_predictions,
+                test_truth)
 
         print_training_state(i, model)
 
