@@ -187,7 +187,9 @@ def save_model(filename: str, model: dict):
 
     model_template['epoch'] = model['epoch']
     model_template['alpha'] = model['alpha']
-    model_template['batch'] = model['batch']
+    model_template['batch'] = (model['batch'] if model['batch'] <
+                               len(model['data_train'])
+                               else len(model['data_train']))
     model_template['loss'] = FUNCTION_NAME[model['loss']]
     model_template['seed'] = model['seed']
     model_template['optimizer'] = model['optimizer']
