@@ -1,6 +1,7 @@
 import argparse as ap
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 import ft_mlp as ft_mlp
 
 
@@ -114,6 +115,13 @@ def main(args: ap.Namespace):
     # Prediction
     predictions = ft_mlp.predict(model, model['data'])
     decoded_predictions = one_decoded(predictions, model['truth_classes'])
+
+    # Save predictions to file
+    with open('prediction.csv', 'w') as f:
+        f.write("Index,Prediction\n")
+        for i, val in tqdm(enumerate(decoded_predictions),
+                           total=len(decoded_predictions)):
+            f.write(f"{i},{val}\n")
 
     # TESTING
     # print("Decoded predictions:")
