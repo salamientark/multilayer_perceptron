@@ -24,7 +24,7 @@ $(VENV_DIR):
 	python3 -m venv $(VENV_DIR)
 	@echo -e "$(YELLOW)[INFO]$(NC) Installing dependencies..."
 	$(PIP) install --upgrade pip
-	$(PIP) install numpy matplotlib pandas flake8
+	$(PIP) install numpy matplotlib pandas flake8 PyQt5
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Virtual environment created and dependencies installed!"
 
 norminette: $(VENV_DIR)
