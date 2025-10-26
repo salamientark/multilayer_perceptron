@@ -53,9 +53,14 @@ fclean: clean
 		echo -e "$(YELLOW)[WARNING]$(NC) No virtual environment to remove!"; \
 	fi
 
+venv: $(VENV_DIR)
+	@echo -e "$(GREEN)[INFO]$(NC) To use the virtual environment, run:"
+	@echo -e "$(YELLOW)source .venv/bin/activate$(NC)"
+
 help:
 	@echo "Available targets:"
 	@echo "  all        - Create .venv and install dependencies"
+	@echo "  venv       - Display how to activate virtual environment"
 	@echo "  norminette - Run flake8 on all Python files"
 	@echo "  clean      - Remove installed dependencies"
 	@echo "  fclean     - Remove dependencies and .venv directory"
