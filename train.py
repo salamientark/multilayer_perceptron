@@ -192,9 +192,6 @@ def init_model(model: dict) -> dict:
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
-    model['output']['gradients'] = {}
-    model['output']['result'] = None
-    # model['output']['test_result'] = None
     model['train_truth'] = ft_mlp.one_encoding(model['data_train'],
                                                TARGET)
     model['test_truth'] = ft_mlp.one_encoding(model['data_test'],
@@ -464,8 +461,13 @@ def plot_loss_and_accuracy_curves(model: dict):
     plt.show()
 
 
-def main(args):
-    """Train the model"""
+def main(args: ap.Namespace):
+    """Train the model
+
+    Parameters:
+    args: argparse.Namespace
+        Parsed program arguments
+    """
     model = ft_mlp.create_model(args, TARGET, FEATURES)
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias

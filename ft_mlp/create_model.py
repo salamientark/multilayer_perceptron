@@ -42,8 +42,6 @@ def init_model_template() -> dict:
             'input': {
                 # 'features': [],
                 'shape': None,
-                # 'train_data': None,
-                # 'test_data': None
                 },        # Input layer configuration
             'layers': [],         # List of hidden layer configurations
             'output': {
@@ -213,3 +211,17 @@ def create_model(args, target: str, features: list = []):
     for layer in model['layers']:
         layer['derivative'] = DERIVATIVE_MAP[layer['activation']]
     return model
+
+
+def load_model_from_json(file) -> dict:
+    """Load model parameters from a JSON file
+
+    Parameters:
+      file : File object containing JSON model data
+
+    Returns:
+      dict: Model parameters loaded from JSON file
+    """
+    model = init_model_template()
+    filled_model = fill_model_from_json(model, file)
+    return filled_model
