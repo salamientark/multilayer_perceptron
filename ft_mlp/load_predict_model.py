@@ -1,6 +1,6 @@
 import pandas as pd
 from .create_model import load_model_from_json
-from .preprocessing import standardize_df
+from .preprocessing import standardize_df, get_class_list
 from .model_utils import load_weights_from_file
 
 
@@ -25,7 +25,8 @@ def load_predict_model_weights(model: dict, weights):
 def load_predict_model_data(
         model: dict,
         dataset,
-        features: list = []
+        features: list = [],
+        target: str | None = None
         ) -> None:
     """Load dataset into model structure
 
@@ -35,6 +36,7 @@ def load_predict_model_data(
       model (dict) : Model structure
       dataset (pandas.DataFrame) : Dataset to load
       features (list) : List of features names
+    target (str | None) : Target column name
 
     Returns:
       dict : Model structure with loaded dataset
@@ -45,13 +47,18 @@ def load_predict_model_data(
     filtered_df = pd.DataFrame(df[features])
     standardized_data = standardize_df(filtered_df)
     model['data'] = standardized_data.to_numpy()
+    if target is not None:
+        target_classes = get_class_list(df, target)
+        model['truth_classes'] = target_classes
+        model['truth'] = df[target]
 
 
 def load_predict_model(
         model_filename: str,
         weights_filename: str,
         data_filename: str,
-        features: list = []
+        features: list = [],
+        target: str | None = None
         ) -> dict:
     """Load model, weights, and dataset for prediction
 
@@ -60,6 +67,7 @@ def load_predict_model(
       weights_filename (str) : Path to weights file
       data_filename (str) : Path to dataset file
       features (list) : List of feature names
+      target (str | None) : Target column name (not used here)
 
     Returns:
       dict : Loaded model structure with weights and dataset
@@ -69,7 +77,7 @@ def load_predict_model(
     load_predict_model_weights(model, weights)
 
     # Load dataset
-    load_predict_model_data(model, data_filename, features)
+    load_predict_model_data(model, data_filename, features, target)
 
     # Remove unneeded keys
     for layer in model['layers']:

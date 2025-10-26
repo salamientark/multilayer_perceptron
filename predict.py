@@ -108,12 +108,14 @@ def main(args: ap.Namespace):
     """
     # Init
     model = ft_mlp.load_predict_model(args.model, args.weights, args.data,
-                                      features=FEATURES)
+                                      features=FEATURES, target=TARGET)
     verify_model(model)
 
     # Prediction
     predictions = ft_mlp.predict(model, model['data'])
-    decoded_predictions = one_decoded(predictions, ['M', 'B'])
+    decoded_predictions = one_decoded(predictions, model['truth_classes'])
+
+    # TESTING
     # print("Decoded predictions:")
     print(f"Predi: {decoded_predictions}")
     truth = pd.read_csv(args.data)[TARGET].to_list()
@@ -122,7 +124,6 @@ def main(args: ap.Namespace):
               else 'Invalid' for i in range(len(truth))]
     valid_count = result.count('Valid')
     invalid_count = result.count('Invalid')
-    # print(f"Results: {result}")
     print()
     print(f"Valid predictions: {ft_mlp.GREEN}{valid_count}\n"
           f"{ft_mlp.RESET}"
