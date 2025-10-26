@@ -1,6 +1,22 @@
 import argparse as ap
 import numpy as np
 import ft_mlp as ft_mlp
+import pandas as pd
+
+
+FEATURES = [
+        'radius_mean', 'texture_mean', 'perimeter_mean',
+        'area_mean', 'smoothness_mean', 'compactness_mean',
+        'concavity_mean', 'concave_points_mean', 'symmetry_mean',
+        'fractal_dimension_mean', 'radius_std', 'texture_std',
+        'perimeter_std', 'area_std', 'smoothness_std', 'compactness_std',
+        'concavity_std', 'concave_points_std', 'symmetry_std',
+        'fractal_dimension_std', 'radius_worst', 'texture_worst',
+        'perimeter_worst', 'area_worst', 'smoothness_worst',
+        'compactness_worst', 'concavity_worst', 'concave_points_worst',
+        'symmetry_worst', 'fractal_dimension_worst'
+        ]
+TARGET = 'diagnosis'
 
 
 def parse_args():
@@ -36,7 +52,7 @@ def load_weights_from_file(file) -> dict:
     return weights
 
 
-def load_model_weights(model: dict, weights):
+def load_predict_model_weights(model: dict, weights):
     """Load weights into model structure
 
     Used for prediction.
@@ -54,18 +70,43 @@ def load_model_weights(model: dict, weights):
     model['output']['bias'] = weights['output_bias']
 
 
+def load_predict_model_data(
+        model: dict,
+        dataset,
+        features: list = []
+        ) -> None:
+    """Load dataset into model structure
+
+    Used for prediction.
+
+    Parameters:
+      model (dict) : Model structure
+      dataset (pandas.DataFrame) : Dataset to load
+      features (list) : List of features names
+
+    Returns:
+      dict : Model structure with loaded dataset
+    """
+    df = pd.read_csv(dataset)
+    if not features:
+        features = df.columns.tolist()
+    filtered_df = pd.DataFrame(df[features])
+    standardized_data = ft_mlp.standardize_df(filtered_df)
+    model['data'] = standardized_data.to_numpy()
+
+
 def load_predict_model(args: ap.Namespace) -> dict:
     """Load model and weights for prediction
 
     Parameters:
-    args (argparse.Namespace): Parsed program arguments
+      args (argparse.Namespace): Parsed program arguments
     """
     model = ft_mlp.load_model_from_json(args.model)
     weights = load_weights_from_file(args.weights)
-    load_model_weights(model, weights)
+    load_predict_model_weights(model, weights)
 
     # Load dataset
-    model['data'] = np.loadtxt(args.data, skiprows=1)
+    load_predict_model_data(model, args.data, FEATURES)
 
     # Remove unneeded keys
     for layer in model['layers']:
@@ -120,9 +161,6 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
-    # model = ft_mlp.load_model_from_json(args.model)
-    # weights = load_weights_from_file(args.weights)
-    # load_model_weights(model, weights)
     model = load_predict_model(args)
     verify_model(model)
     ft_mlp.print_model(model)
