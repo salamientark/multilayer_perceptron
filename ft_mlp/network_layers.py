@@ -103,3 +103,36 @@ def hidden_layer(inputs: np.ndarray,
     """
     weighted_sum = inputs @ weights + bias
     return activation(weighted_sum)
+
+
+def predict(model: dict, inputs: np.ndarray) -> np.ndarray:
+    """Predict output for given inputs
+
+    Used to just calculate the output of the model for given inputs.
+    DO NOT USE as feed forward pass
+
+    Parameters:
+      model (dict): Model parameters to use for prediction
+      inputs (np.ndarray): Input data to predict
+
+    Returns:
+      np.ndarray: Model predictions
+    """
+    layer_inputs = np.copy(inputs)
+    result = None
+
+    # Hidden layer calculation
+    for layer in model['layers']:
+        result = hidden_layer(
+                layer_inputs, layer['weights'],
+                layer['bias'],
+                activation=layer['activation'])
+        layer_inputs = result
+
+    # Ouput layer calculation
+    output_layer = model['output']
+    result = hidden_layer(
+            layer_inputs, output_layer['weights'],
+            output_layer['bias'],
+            activation=output_layer['activation'])
+    return result

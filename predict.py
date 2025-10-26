@@ -1,4 +1,6 @@
 import argparse as ap
+import pandas as pd
+import numpy as np
 import ft_mlp as ft_mlp
 
 
@@ -78,6 +80,25 @@ def verify_model(model: dict):
                              "structure.")
 
 
+def one_decoded(onecoded: np.ndarray, class_list: list) -> list:
+    """Decode one-hot encoded array into class labels
+
+    Used for prediction results decoding.
+
+    Parameters:
+    onecoded (np.ndarray): One-hot encoded array
+    class_list (list): List of class labels
+
+    Return:
+    list: Decoded class labels
+    """
+    decoded = []
+    indexes = ft_mlp.ft_argmax(onecoded)
+    for i in indexes:
+        decoded.append(class_list[i])
+    return decoded
+
+
 def main(args: ap.Namespace):
     """Make prediction using the loaded model on dataset
 
@@ -85,11 +106,29 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
+    # Init
     model = ft_mlp.load_predict_model(args.model, args.weights, args.data,
                                       features=FEATURES)
     verify_model(model)
 
-    print('Exit OK')
+    # Prediction
+    predictions = ft_mlp.predict(model, model['data'])
+    decoded_predictions = one_decoded(predictions, ['M', 'B'])
+    # print("Decoded predictions:")
+    print(f"Predi: {decoded_predictions}")
+    truth = pd.read_csv(args.data)[TARGET].to_list()
+    print(f"Truth: {truth}")
+    result = ['Valid' if decoded_predictions[i] == truth[i]
+              else 'Invalid' for i in range(len(truth))]
+    valid_count = result.count('Valid')
+    invalid_count = result.count('Invalid')
+    # print(f"Results: {result}")
+    print()
+    print(f"Valid predictions: {ft_mlp.GREEN}{valid_count}\n"
+          f"{ft_mlp.RESET}"
+          f"Invalid predictions: {ft_mlp.RED}{invalid_count}"
+          f"{ft_mlp.RESET}")
+
     return
 
 

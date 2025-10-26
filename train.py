@@ -311,39 +311,6 @@ def update_weights(
     model['output']['bias'] -= alpha * gradients[-1][1]
 
 
-def predict(model: dict, inputs: np.ndarray) -> np.ndarray:
-    """Predict output for given inputs
-
-    Used to just calculate the output of the model for given inputs.
-    DO NOT USE as feed forward pass
-
-    Parameters:
-      model (dict): Model parameters to use for prediction
-      inputs (np.ndarray): Input data to predict
-
-    Returns:
-      np.ndarray: Model predictions
-    """
-    layer_inputs = np.copy(inputs)
-    result = None
-
-    # Hidden layer calculation
-    for hidden_layer in model['layers']:
-        result = ft_mlp.hidden_layer(
-                layer_inputs, hidden_layer['weights'],
-                hidden_layer['bias'],
-                activation=hidden_layer['activation'])
-        layer_inputs = result
-
-    # Ouput layer calculation
-    output_layer = model['output']
-    result = ft_mlp.hidden_layer(
-            layer_inputs, output_layer['weights'],
-            output_layer['bias'],
-            activation=output_layer['activation'])
-    return result
-
-
 def print_training_state(epoch: int, model: dict):
     """Print training state for given epoch
 
@@ -410,7 +377,7 @@ def train(model: dict):
         model['train_acc'][i] = epoch_train_acc / total_batch
 
         # Validation
-        test_predictions = predict(model, model['data_test'][features])
+        test_predictions = ft_mlp.predict(model, model['data_test'][features])
         test_truth = model['test_truth']
         model['test_loss'][i] = ft_mlp.calculate_loss(
                 test_predictions,

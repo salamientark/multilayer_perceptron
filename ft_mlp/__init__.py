@@ -45,7 +45,8 @@ from .network_layers import ( # noqa
         sigmoid,
         softmax,
         perceptron,
-        hidden_layer
+        hidden_layer,
+        predict
         )
 from .optimizers import ( # noqa
         batch_gradient_descent,

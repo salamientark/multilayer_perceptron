@@ -21,6 +21,8 @@ def categorical_cross_entropy(prediction: np.ndarray, truth: np.ndarray):
 def binary_cross_entropy(prediction: np.ndarray, truth: np.ndarray):
     """Calculate BinaryCrossEntropy for model tunning (loss)
 
+    Return the mean of the BinaryCrossEntropy for each input
+
     Parameters:
       prediction (np.ndarray): Values predicted by the model
       truth (np.ndarray): True value from the dataset
