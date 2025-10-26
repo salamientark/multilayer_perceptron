@@ -58,7 +58,7 @@ from .preprocessing import ( # noqa
         get_numerical_features,
         get_class_list,
         convert_classes_to_nbr,
-        one_encoding,
+        one_encode,
         remove_nan,
         replace_nan,
         remove_missing,

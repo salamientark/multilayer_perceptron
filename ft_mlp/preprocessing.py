@@ -80,7 +80,7 @@ def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
     return converted_col.astype(int)
 
 
-def one_encoding(df: pd.DataFrame, col: str) -> np.ndarray:
+def one_encode(df: pd.DataFrame, col: str) -> np.ndarray:
     """Convert a column of class names to numerical values using one encoding
 
     Parameters:

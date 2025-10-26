@@ -1,7 +1,5 @@
 import argparse as ap
-import pandas as pd
 import numpy as np
-from tqdm import tqdm
 import ft_mlp as ft_mlp
 
 
@@ -18,6 +16,7 @@ FEATURES = [
         'symmetry_worst', 'fractal_dimension_worst'
         ]
 TARGET = 'diagnosis'
+OUTFILE = 'prediction.csv'
 
 
 def parse_args():
@@ -117,27 +116,29 @@ def main(args: ap.Namespace):
     decoded_predictions = one_decoded(predictions, model['truth_classes'])
 
     # Save predictions to file
+    print(f"Saving result to file {ft_mlp.BLUE}{OUTFILE}{ft_mlp.RESET}"
+          "... ", end="", flush=True)
     with open('prediction.csv', 'w') as f:
         f.write("Index,Prediction\n")
-        for i, val in tqdm(enumerate(decoded_predictions),
-                           total=len(decoded_predictions)):
+        for i, val in enumerate(decoded_predictions):
             f.write(f"{i},{val}\n")
+    print(f"{ft_mlp.GREEN}Success{ft_mlp.RESET}")
 
-    # TESTING
-    # print("Decoded predictions:")
-    print(f"Predi: {decoded_predictions}")
-    truth = pd.read_csv(args.data)[TARGET].to_list()
-    print(f"Truth: {truth}")
-    result = ['Valid' if decoded_predictions[i] == truth[i]
-              else 'Invalid' for i in range(len(truth))]
-    valid_count = result.count('Valid')
-    invalid_count = result.count('Invalid')
-    print()
-    print(f"Valid predictions: {ft_mlp.GREEN}{valid_count}\n"
-          f"{ft_mlp.RESET}"
+    # Calculate BCE loss (Binary Cross Entropy)
+    bce_loss = ft_mlp.binary_cross_entropy(predictions, model['truth'])
+    bce_mean = ft_mlp.ft_mean(bce_loss)
+
+    # Show prediction summary
+    truth = model['raw_truth']
+    matches = [pred == actual for pred, actual in zip(decoded_predictions,
+                                                      truth)]
+    valid_count = sum(matches)
+    invalid_count = len(matches) - valid_count
+    print(f"Valid predictions: {ft_mlp.GREEN}{valid_count}"
+          f"{ft_mlp.RESET}\n"
           f"Invalid predictions: {ft_mlp.RED}{invalid_count}"
-          f"{ft_mlp.RESET}")
-
+          f"{ft_mlp.RESET}\n"
+          f"BCE loss: {ft_mlp.BLUE}{bce_mean}{ft_mlp.RESET}")
     return
 
 

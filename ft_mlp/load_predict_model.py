@@ -1,6 +1,6 @@
 import pandas as pd
 from .create_model import load_model_from_json
-from .preprocessing import standardize_df, get_class_list
+from .preprocessing import standardize_df, get_class_list, one_encode
 from .model_utils import load_weights_from_file
 
 
@@ -50,7 +50,8 @@ def load_predict_model_data(
     if target is not None:
         target_classes = get_class_list(df, target)
         model['truth_classes'] = target_classes
-        model['truth'] = df[target]
+        model['raw_truth'] = df[target].to_list()
+        model['truth'] = one_encode(df, target)
 
 
 def load_predict_model(

@@ -192,10 +192,10 @@ def init_model(model: dict) -> dict:
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
-    model['train_truth'] = ft_mlp.one_encoding(model['data_train'],
-                                               TARGET)
-    model['test_truth'] = ft_mlp.one_encoding(model['data_test'],
-                                              TARGET)
+    model['train_truth'] = ft_mlp.one_encode(model['data_train'],
+                                             TARGET)
+    model['test_truth'] = ft_mlp.one_encode(model['data_test'],
+                                            TARGET)
     model['train_loss'] = np.zeros((model['epoch'], len(model['data_train'])))
     model['test_loss'] = np.zeros((model['epoch'], len(model['data_test'])))
     model['train_acc'] = np.zeros(model['epoch'])
