@@ -15,4 +15,9 @@
   - [x] Stochastic gradient descent (batch = 1)
 
 ## Predicting
+- [x] Update model template to remove data_* fields
+- [ ] Fix optimizer field based on batch size
+- [x] Implement model weight + layer dimension verification
+- [ ] Implement data compatibility check (column count)
+- [ ] Implement predict functionality
 - [ ] Create predict.py program

@@ -36,8 +36,6 @@ def init_model_template() -> dict:
             'batch': None,        # Batch size for mini-batch gradient descent
             'loss': None,         # Loss function to optimize
             'seed': None,
-            'data_train': None,
-            'data_test': None,
             'optimizer': None,
             'input': {
                 # 'features': [],
