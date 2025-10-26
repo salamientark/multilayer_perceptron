@@ -1,7 +1,5 @@
 import argparse as ap
-import numpy as np
 import ft_mlp as ft_mlp
-import pandas as pd
 
 
 FEATURES = [
@@ -26,93 +24,15 @@ def parse_args():
             description="Use a mlp model to make prediction on a given "
                         "dataset.",
             epilog=".... . .-.. .-.. --- / .-- --- .-. .-.. -.. -.-.--")
-    parser.add_argument("--model", "-m", type=ap.FileType('r'), required=True,
+    parser.add_argument("--model", "-m", type=str, required=True,
                         help="Path to the model file.")
     parser.add_argument("--weights", "-w",
-                        type=ap.FileType('rb'),
+                        type=str,
                         required=True, help="Path to the model weights file.")
-    parser.add_argument("--data", "-d", type=ap.FileType('r'), required=True,
+    parser.add_argument("--data", "-d", type=str, required=True,
                         help="Path to the dataset file.")
     args = parser.parse_args()
     return args
-
-
-def load_weights_from_file(file) -> dict:
-    """Load model weights from file
-
-    Used for prediction.
-
-    Parameters:
-      file (str | file type) : File path or opened file IO buffer
-
-    Returns:
-      dict : Weights loaded from file
-    """
-    weights = np.load(file)
-    return weights
-
-
-def load_predict_model_weights(model: dict, weights):
-    """Load weights into model structure
-
-    Used for prediction.
-
-    Parameters:
-      model (dict) : Model structure
-      weights (np.lib.npyio.NpzFile) : Weights loaded from file
-    """
-    for i, layer in enumerate(model['layers']):
-        weight_key = f'layer_{i}_weights'
-        bias_key = f'layer_{i}_bias'
-        layer['weights'] = weights[weight_key]
-        layer['bias'] = weights[bias_key]
-    model['output']['weights'] = weights['output_weights']
-    model['output']['bias'] = weights['output_bias']
-
-
-def load_predict_model_data(
-        model: dict,
-        dataset,
-        features: list = []
-        ) -> None:
-    """Load dataset into model structure
-
-    Used for prediction.
-
-    Parameters:
-      model (dict) : Model structure
-      dataset (pandas.DataFrame) : Dataset to load
-      features (list) : List of features names
-
-    Returns:
-      dict : Model structure with loaded dataset
-    """
-    df = pd.read_csv(dataset)
-    if not features:
-        features = df.columns.tolist()
-    filtered_df = pd.DataFrame(df[features])
-    standardized_data = ft_mlp.standardize_df(filtered_df)
-    model['data'] = standardized_data.to_numpy()
-
-
-def load_predict_model(args: ap.Namespace) -> dict:
-    """Load model and weights for prediction
-
-    Parameters:
-      args (argparse.Namespace): Parsed program arguments
-    """
-    model = ft_mlp.load_model_from_json(args.model)
-    weights = load_weights_from_file(args.weights)
-    load_predict_model_weights(model, weights)
-
-    # Load dataset
-    load_predict_model_data(model, args.data, FEATURES)
-
-    # Remove unneeded keys
-    for layer in model['layers']:
-        layer.pop('weights_initializer', None)
-    model['output'].pop('weights_initializer', None)
-    return model
 
 
 def verify_model(model: dict):
@@ -123,6 +43,10 @@ def verify_model(model: dict):
     Parameters:
       model (dict) : Model structure
     """
+    if model['data'] is None:
+        raise ValueError("Model data is not correctly loaded.")
+    if model['data'].shape[1] != model['input']['shape']:
+        raise ValueError("Model data shape do not match model structure.")
     last_layer_index = len(model['layers']) - 1
     for i, layer in enumerate(model['layers']):
         if 'weights' not in layer or 'bias' not in layer:
@@ -161,9 +85,9 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
-    model = load_predict_model(args)
+    model = ft_mlp.load_predict_model(args.model, args.weights, args.data,
+                                      features=FEATURES)
     verify_model(model)
-    ft_mlp.print_model(model)
 
     print('Exit OK')
     return

@@ -211,15 +211,16 @@ def create_model(args, target: str, features: list = []):
     return model
 
 
-def load_model_from_json(file) -> dict:
+def load_model_from_json(filename: str) -> dict:
     """Load model parameters from a JSON file
 
     Parameters:
-      file : File object containing JSON model data
+      filename (str) : Path to JSON file containing model parameters
 
     Returns:
       dict: Model parameters loaded from JSON file
     """
     model = init_model_template()
-    filled_model = fill_model_from_json(model, file)
+    with open(filename, 'r') as f:
+        filled_model = fill_model_from_json(model, f)
     return filled_model

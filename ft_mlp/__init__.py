@@ -18,6 +18,7 @@ from .ft_math import ( # noqa
         ft_kurtosis,
         ft_argmax
         )
+from .load_predict_model import load_predict_model  # noqa
 from .loss_functions import ( # noqa
         categorical_cross_entropy,
         binary_cross_entropy
@@ -30,6 +31,7 @@ from .model_utils import ( # noqa
         unstandardized_thetas,
         save_thetas,
         save_weights,
+        load_weights_from_file,
         save_model,
         calculate_loss,
         calculate_loss_mean,

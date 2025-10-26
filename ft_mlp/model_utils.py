@@ -176,6 +176,21 @@ def save_weights(filename: str, model: dict):
     print(f"{GREEN}Success{RESET}")
 
 
+def load_weights_from_file(file) -> dict:
+    """Load model weights from file
+
+    Used for prediction.
+
+    Parameters:
+      file (str | file type) : File path or opened file IO buffer
+
+    Returns:
+      dict : Weights loaded from file
+    """
+    weights = np.load(file)
+    return weights
+
+
 def save_model(filename: str, model: dict):
     """Save model to a json file
 
