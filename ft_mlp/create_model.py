@@ -177,7 +177,7 @@ def fill_model_datasets(
     df = pd.read_csv(dataset)
     if not features:
         features = model['input']['features']
-    filtered_df = df[features + [target]]
+    filtered_df = pd.DataFrame(df[features + [target]])
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
             standardized_data, ratio=training_rate, seed=seed)

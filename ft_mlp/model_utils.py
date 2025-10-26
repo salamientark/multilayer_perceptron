@@ -125,7 +125,7 @@ def unstandardized_thetas(
     Returns:
       dict: Unstandardized thetas
     """
-    means = {feature: ft_mean(df[feature]) for feature in features}
+    means = {feature: ft_mean(df[feature].to_numpy()) for feature in features}
     std = {feature: ft_std(df[feature], mean=means[feature])
            for feature in features}
     unstandardized = {

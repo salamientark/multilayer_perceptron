@@ -13,7 +13,7 @@ def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
     Returns:
       pd.DataFrame: Dataframe with o the specified columns.
     """
-    return df[features]
+    return pd.DataFrame(df[features])
 
 
 def get_numerical_features(
@@ -80,7 +80,7 @@ def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
     return converted_col.astype(int)
 
 
-def one_encoding(df: pd.DataFrame, col: str) -> pd.DataFrame:
+def one_encoding(df: pd.DataFrame, col: str) -> np.ndarray:
     """Convert a column of class names to numerical values using one encoding
 
     Parameters:
@@ -94,8 +94,6 @@ def one_encoding(df: pd.DataFrame, col: str) -> pd.DataFrame:
     one_encoded_val = {}
     for _, c in enumerate(class_list):
         one_encoded_val[c] = [int(val == c) for val in class_list]
-    # l = df[col].to_numpy()
-    # return np.array(list(map((lambda x: one_encoded_val[x]), l)))
     return np.array(list(map((lambda x: one_encoded_val[x]), df[col])))
 
 
@@ -132,7 +130,7 @@ def replace_nan(
     f = func if func is not None else ft_mean
     cols = columns if columns != [] else new_df.columns
     for column in cols:
-        tmp_col = remove_nan(new_df[column].tolist())
+        tmp_col = remove_nan(new_df[column].to_numpy())
         val = f(tmp_col)
         new_df[column] = new_df[column].fillna(val)
     return new_df
@@ -234,4 +232,4 @@ def split_dataset(df: pd.DataFrame,
       tuple[pandas.DataFrame, pandas.DataFrame): Tuple of dataframes
     """
     x = df.sample(frac=ratio, random_state=seed)
-    return (x, df.drop(x.index))
+    return (x, df.drop(x.index.tolist()))
