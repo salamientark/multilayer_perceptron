@@ -80,6 +80,8 @@ def load_predict_model(
     # Load dataset
     if model['features'] is not None:
         features = model['features']
+    if model['target'] is not None:
+        target = model['target']
     load_predict_model_data(model, data_filename, features, target)
 
     # Remove unneeded keys
