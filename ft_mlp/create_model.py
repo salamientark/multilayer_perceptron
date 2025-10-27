@@ -156,6 +156,10 @@ def fill_model_from_param(args, model: dict) -> dict:
     if args.features is not None:
         model['features'] = args.features
         model['input']['shape'] = len(model['features'])
+
+    # Fill model output shape
+    if model['output']['activation'] is None:
+        model['output']['weights_initializer'] = he_initialisation
     return model
 
 
@@ -219,8 +223,6 @@ def create_model(args, target: str, features: list = []):
         elif model['batch'] == 1:
             model['optimizer'] = 'stochastic'
 
-    # model['optimizer'] = ('mini-batch' if model['batch'] is not None
-    #                       else 'stochastic')
     # Set derivatives for each layer
     for layer in model['layers']:
         layer['derivative'] = DERIVATIVE_MAP[layer['activation']]

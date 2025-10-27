@@ -413,6 +413,7 @@ def plot_loss_and_accuracy_curves(model: dict):
     axes[0].set_title('Loss')
     axes[0].set_xlabel('epochs')
     axes[0].set_ylabel('loss')
+    axes[0].set_xlim(0, model['epoch'] - 1)
     axes[0].legend()
 
     # Plot on the second subplot (right one)
@@ -422,9 +423,12 @@ def plot_loss_and_accuracy_curves(model: dict):
     axes[1].set_title('Accuracy')
     axes[1].set_xlabel('epoch')
     axes[1].set_ylabel('accuracy')
+    axes[1].set_xlim(0, model['epoch'] - 1)
     axes[1].legend()
 
-    plt.get_current_fig_manager().full_screen_toggle()
+    manager = plt.get_current_fig_manager()
+    if manager is not None:
+        manager.full_screen_toggle()
     plt.show()
 
 
@@ -435,12 +439,8 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
-    print('Go create model')
     model = ft_mlp.create_model(args, TARGET, FEATURES)
-    print('create_model success')
-    ft_mlp.print_model(model)
     check_model(model)  # Validate model inputs
-    print('check_model success')
     init_model(model)  # Init model weights and bias
     train(model)
     ft_mlp.save_weights("weights.npz", model)
