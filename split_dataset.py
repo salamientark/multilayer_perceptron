@@ -1,6 +1,6 @@
 import argparse as ap
 import pandas as pd
-from ft_mlp import split_dataset
+from ft_mlp import split_dataset, RED, RESET, GREEN, BLUE
 
 
 # Data columns name
@@ -38,12 +38,6 @@ data_columns_names = [
     "symmetry_worst",
     "fractal_dimension_worst"
 ]
-
-
-# COLORS
-RED = '\033[91m'
-GREEN = '\033[92m'
-RESET = '\033[0m'
 
 
 def parse_args():
@@ -121,9 +115,15 @@ def main(args):
                                             seed=args.seed)
 
         # Writing to file
+        print(f"Saving training set to : {BLUE}{args.outfile[0]}{RESET} ... ",
+              end="")
         train_set.to_csv(args.outfile[0], index=False)
-        # test_set['diagnosis'] = None  # Removind diagnosis value
+        print(f"{GREEN}OK!{RESET}")
+
+        print(f"Saving test set to     : {BLUE}{args.outfile[1]}{RESET} ... ",
+              end="")
         test_set.to_csv(args.outfile[1], index=False)
+        print(f"{GREEN}OK!{RESET}")
     except Exception as e:
         print(f"{RED}Error{RESET}: {e}")
 
