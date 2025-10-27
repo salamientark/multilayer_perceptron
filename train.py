@@ -135,12 +135,12 @@ def check_model(model: dict):
     if model['data_train'] is None or model['data_test'] is None:
         raise Exception("Training and validation datasets must be provided.")
     if model['optimizer'] is None or model['optimizer'] not in \
-            ['mini-batch', 'stochastic']:
+            ['mini-batch', 'stochastic', 'batch']:
         raise Exception("Optimizer must be mini-batch or stochastic.")
     if model['input']['shape'] is None or model['input']['shape'] <= 0:
         raise Exception("Input layer must have a positive number of neurons.")
-    if (model['input']['features'] is None
-            or len(model['input']['features']) == 0):
+    if (model['features'] is None
+            or len(model['features']) == 0):
         raise Exception("Input layer must have at least one feature.")
     if model['output']['shape'] is None or model['output']['shape'] <= 0:
         raise Exception("Output layer must have a positive number of neurons.")
@@ -150,7 +150,7 @@ def check_model(model: dict):
     if (model['output']['weights_initializer'] is None or
             model['output']['weights_initializer']
             is not ft_mlp.he_initialisation):
-        raise Exception("Output layer weight initialization must be zero "
+        raise Exception("Output layer weight initialization must be heUniform "
                         "initialization.")
     for layer in model['layers']:
         if layer['shape'] is None or layer['shape'] <= 0:
@@ -163,7 +163,7 @@ def check_model(model: dict):
         if (layer['weights_initializer'] is None
             or layer['weights_initializer']
                 is not ft_mlp.he_initialisation):
-            raise Exception("All hidden layers must use zero weight "
+            raise Exception("All hidden layers must use HeUniform "
                             "initialization.")
 
 
@@ -339,7 +339,7 @@ def train(model: dict):
     print("data_train shape:", model['data_train'].shape)
     print("data_validation shape:", model['data_test'].shape)
     loss = model['loss']
-    features = model['input']['features']
+    features = model['features']
     for i in range(model['epoch']):
         # Batch handling
         batch_size = model['batch']
@@ -435,8 +435,12 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
+    print('Go create model')
     model = ft_mlp.create_model(args, TARGET, FEATURES)
+    print('create_model success')
+    ft_mlp.print_model(model)
     check_model(model)  # Validate model inputs
+    print('check_model success')
     init_model(model)  # Init model weights and bias
     train(model)
     ft_mlp.save_weights("weights.npz", model)
