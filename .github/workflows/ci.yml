@@ -4,6 +4,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -23,9 +24,9 @@ jobs:
     
     # Step 3: Install dependencies
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install numpy pandas matplotlib
+      run: make
+    # python -m pip install --upgrade pip
+    # pip install numpy pandas matplotlib
     
     # Step 4: Basic functionality test
     - name: Test train.py help
