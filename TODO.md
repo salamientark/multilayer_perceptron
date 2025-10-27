@@ -26,4 +26,5 @@
 
 ## Model Enhancement
 - [ ] Add features field when saving/loading models
+- [ ] Add feature selector from json
 

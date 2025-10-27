@@ -46,8 +46,9 @@ def parse_args():
                                   "with --neurons).")
     shape_group.add_argument("--conf", type=ap.FileType('r'),
                              help="Model configuration file.")
-    parser.add_argument("--features", choices=FEATURES, nargs='+',
-                        default=FEATURES, help="List of features to use.")
+    parser.add_argument("--features", choices=FEATURES, nargs='*',
+                        # default=FEATURES,
+                        help="List of features to use.")
     parser.add_argument("--neurons", type=int, required=False,
                         help="Define a constant number of neurons for all "
                              "hidden layers (use with --layer).")
@@ -439,7 +440,8 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
-    model = ft_mlp.create_model(args, TARGET, args.features)
+    features = args.features if args.features is not None else FEATURES
+    model = ft_mlp.create_model(args, TARGET, features)
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias
     train(model)

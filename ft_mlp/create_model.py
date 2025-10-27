@@ -122,6 +122,8 @@ def fill_model_from_json(model: dict, config_file) -> dict:
                             for layer in conf[k]]
         else:
             raise KeyError(f"Invalid key '{k}' in configuration file.")
+    if model['features'] is not None:
+        model['input']['shape'] = len(model['features'])
     return model
 
 
@@ -169,7 +171,7 @@ def fill_model_datasets(
         training_rate: float,
         seed: int,
         target: str,
-        features: list = []
+        features: list
         ) -> dict:
     """Split dataset and fill model with training and validation set
 
@@ -186,8 +188,6 @@ def fill_model_datasets(
       dict: Model parameters populated with training and validation datasets
     """
     df = pd.read_csv(dataset)
-    if not features:
-        features = model['features']
     filtered_df = pd.DataFrame(df[features + [target]])
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
@@ -200,18 +200,21 @@ def fill_model_datasets(
     return model
 
 
-def create_model(args, target: str, features: list = []):
+def create_model(args, target: str, features: list | None = None) -> dict:
     """Create and initialize model parameters
 
     Parameters:
       args (argparse.Namespace): Parsed program arguments
     """
     model = init_model_template()
+    model['features'] = features
+    if features is not None:
+        model['input']['shape'] = len(features)
     if args.conf is not None:
         model = fill_model_from_json(model, args.conf)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
-                                model['seed'], target, features)
+                                model['seed'], target, model['features'])
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
