@@ -439,7 +439,7 @@ def main(args: ap.Namespace):
     args: argparse.Namespace
         Parsed program arguments
     """
-    model = ft_mlp.create_model(args, TARGET, FEATURES)
+    model = ft_mlp.create_model(args, TARGET, args.features)
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias
     train(model)

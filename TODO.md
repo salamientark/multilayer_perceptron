@@ -17,11 +17,13 @@
 ## Predicting
 - [x] Update model template to remove data_* fields
 - [x] Implement model weight + layer dimension verification
-- [ ] Implement data compatibility check (column count)
 - [x] Implement predict functionality
 - [x] Create predict.py program
 
 ## Bug Fixes & Testing
-- [ ] Fix model optimizer field
+- [x] Fix model optimizer field
 - [ ] Test
+
+## Model Enhancement
+- [ ] Add features field when saving/loading models
 

@@ -196,6 +196,7 @@ def fill_model_datasets(
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
     model['output']['shape'] = filtered_df[target].nunique()
+    model['target'] = target
     return model
 
 
