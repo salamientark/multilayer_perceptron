@@ -6,7 +6,7 @@ default_valid_model = {
     'epochs': 100,
     'alpha': 0.01,
     'batch': 32,
-    'loss': 'CategoricalCrossentropy',
+    'loss':None,
     'seed': 42,
     'optimizer': 'mini-batch',
     'features': [
