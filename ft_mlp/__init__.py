@@ -26,8 +26,6 @@ from .loss_functions import ( # noqa
 from .model_utils import ( # noqa
         get_random_seed,
         init_thetas,
-        init_weights_zero,
-        he_initialisation,
         unstandardized_thetas,
         save_thetas,
         save_weights,
@@ -72,4 +70,8 @@ from .colors import ( # noqa
         GREEN,
         RESET,
         BLUE
+        )
+from .initializer import ( # noqa
+        init_weights_zero,
+        he_initialisation
         )

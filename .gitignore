@@ -4,3 +4,4 @@
 /save/**
 *.npz
 *.json
+!./tests/

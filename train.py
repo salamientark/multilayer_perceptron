@@ -110,6 +110,8 @@ def validate_args(args):
         raise Exception("Seed must be a positive integer")
     if args.train_ratio is not None and not (0 < args.train_ratio < 1):
         raise Exception("Train ratio must be between 0 and 1 excluded.")
+    if args.batch is not None and args.batch <= 0:
+        raise Exception("Batch size must be a positive integer.")
 
 
 def check_model(model: dict):

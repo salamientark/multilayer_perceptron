@@ -18,7 +18,7 @@ YELLOW = \033[0;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: all norminette clean fclean
+.PHONY: all norminette test clean fclean
 
 all: $(VENV_DIR)
 	@echo -e "$(GREEN)[INFO]$(NC) Setting up virtual environment and dependencies..."
@@ -41,6 +41,9 @@ norminette: $(VENV_DIR)
 	else \
 		$(FLAKE8) $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; \
 	fi
+
+test: $(VENV_DIR)
+	@$(PYTHON) scripts/run_tests.py $(PYTHON)
 
 clean:
 	@echo -e "$(YELLOW)[INFO]$(NC) Removing installed dependencies..."
@@ -69,5 +72,6 @@ help:
 	@echo "  all        - Create .venv and install dependencies"
 	@echo "  venv       - Display how to activate virtual environment"
 	@echo "  norminette - Run flake8 on all Python files"
+	@echo "  test       - Run all unit tests in tests/ directory"
 	@echo "  clean      - Remove installed dependencies"
 	@echo "  fclean     - Remove dependencies and .venv directory"

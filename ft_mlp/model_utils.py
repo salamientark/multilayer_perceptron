@@ -4,6 +4,7 @@ from .ft_math import ft_mean, ft_std
 from .network_layers import sigmoid, softmax
 from .loss_functions import categorical_cross_entropy
 from .colors import BLUE, GREEN, RESET
+from .initializer import he_initialisation
 from random import seed, randrange
 from sys import maxsize
 from json import dump, dumps, JSONEncoder
@@ -77,37 +78,6 @@ def init_thetas(classes: list, feature_nbr: int) -> dict:
     """
     thetas = {cls: np.zeros(feature_nbr) for cls in classes}
     return thetas
-
-
-def init_weights_zero(features: int, output: int) -> tuple[np.ndarray, float]:
-    """Initialize a weight matrix with zeros
-
-    Parameters:
-      feature (int): Number of features
-      output (int): Number of outputs (next layer neurons nbr)
-
-    Returns:
-        tuple(np.ndarray, float): Weights matrix and bias
-    """
-    return np.zeros((features, output)), 0.0
-
-
-def he_initialisation(features: int, output: int, seed: int, inputs: int
-                      ) -> tuple[np.ndarray, np.ndarray]:
-    """Initialize a weight matrix with He initialization
-
-    Parameters:
-      feature (int): Number of features
-      output (int): Number of outputs (next layer neurons nbr)
-      inputs (int): Number of data inputs
-      seed (int): Random seed
-
-    Returns:
-        tuple(np.ndarray, np.ndarray): Weights matrix and bias
-    """
-    rng = np.random.default_rng(seed=seed)
-    return (rng.normal(loc=0.0, scale=np.sqrt(2 / inputs),
-                       size=(features, output)), np.zeros(output))
 
 
 def unstandardized_thetas(

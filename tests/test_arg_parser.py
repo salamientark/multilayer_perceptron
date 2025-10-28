@@ -27,7 +27,6 @@ import io
 import argparse
 from train import parse_args, validate_args
 
-
 class TestArgParser(unittest.TestCase):
     """Test class for argument parsing functionality"""
     
@@ -440,8 +439,6 @@ class TestArgParser(unittest.TestCase):
             validate_args(args)
         
         self.assertIn("All layer must have at least one neuron.", str(context.exception))
-
-    # TEST conf FILE
 
 if __name__ == '__main__':
     # Run the tests when this file is executed directly

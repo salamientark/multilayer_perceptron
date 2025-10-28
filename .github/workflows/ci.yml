@@ -7,8 +7,11 @@ on:
 
 jobs:
   test:
-    # Run on Linux environment
+    # Run on Linux environment with multiple Python versions
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     
     steps:
     # Step 1: Check out the code from the repository
@@ -25,10 +28,25 @@ jobs:
     - name: Install dependencies
       run: make && source .venv/bin/activate
     
-    # Step 4: Basic functionality test
+    # Step 4: Run code quality checks
+    - name: Run flake8 linting
+      run: make norminette
+      continue-on-error: true  # Don't fail CI if linting has issues
+    
+    # Step 5: Verify test data files
+    - name: Check test data files
+      run: |
+        ls -la tests/test_data/
+        echo "Test data files verified"
+    
+    # Step 6: Run comprehensive test suite
+    - name: Run unit tests
+      run: make test
+    
+    # Step 7: Basic functionality test
     - name: Test train.py help
       run: .venv/bin/python train.py --help
     
-    # Step 5: Test predict.py help  
+    # Step 8: Test predict.py help  
     - name: Test predict.py help
       run: .venv/bin/python predict.py --help
