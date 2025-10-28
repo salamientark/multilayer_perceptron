@@ -44,7 +44,7 @@ def parse_args():
     shape_group.add_argument("--layer", type=int,
                              help="Define the number of hidden layers (use "
                                   "with --neurons).")
-    shape_group.add_argument("--conf", type=ap.FileType('r'),
+    shape_group.add_argument("--conf", type=str,
                              help="Model configuration file.")
     parser.add_argument("--features", choices=FEATURES, nargs='*',
                         # default=FEATURES,
@@ -71,9 +71,9 @@ def parse_args():
                         default=0.8,
                         help="The part of the dataset used as the training "
                              "set. (validation set ratio = 1 - train_ratio)")
-    parser.add_argument("--outfile", "-of", type=ap.FileType('w'),
+    parser.add_argument("--outfile", "-of", type=str,
                         default="weights.csv", help="Weight result file.")
-    parser.add_argument("dataset", type=ap.FileType('r'),
+    parser.add_argument("dataset", type=str,
                         help="Training dataset.")
     # Get args
     args = parser.parse_args()
