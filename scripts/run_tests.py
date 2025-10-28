@@ -18,6 +18,30 @@ class Colors:
     NC = '\033[0m'  # No Color
     BOLD = '\033[1m'
 
+def run_norminette():
+    """Run make norminette and return results"""
+    try:
+        project_root = Path(__file__).parent.parent
+        result = subprocess.run([
+            'make', 'norminette'
+        ], capture_output=True, text=True, cwd=project_root)
+        
+        output = result.stdout + result.stderr
+        # Parse output for SUCCESS/ERROR indicators
+        success = result.returncode == 0 and 'All files pass norminette!' in output
+        
+        return {
+            'success': success,
+            'output': output,
+            'returncode': result.returncode
+        }
+    except FileNotFoundError:
+        return {
+            'success': False,
+            'output': 'make command not found',
+            'returncode': 1
+        }
+
 def run_test_file(test_module, python_executable=None):
     """Run a single test file and return results"""
     if python_executable is None:
@@ -68,6 +92,18 @@ def main():
     # Check if we have a python executable passed as argument (from Makefile)
     python_executable = sys.argv[1] if len(sys.argv) > 1 else sys.executable
     
+    # Run norminette first
+    print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running norminette (flake8)...")
+    norminette_result = run_norminette()
+    
+    if norminette_result['success']:
+        print(f"{Colors.GREEN}[SUCCESS]{Colors.NC} All files pass norminette!")
+    else:
+        print(f"{Colors.RED}[ERROR]{Colors.NC} Norminette violations found!")
+        # Print the actual output to see what failed
+        if norminette_result['output']:
+            print(norminette_result['output'])
+    
     print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running unit tests...")
     
     # Define test modules to run
@@ -103,16 +139,26 @@ def main():
     print(f"{Colors.BOLD}TEST SUMMARY{Colors.NC}")
     print(f"{Colors.YELLOW}{'=' * 40}{Colors.NC}")
     
+    # Add norminette result to summary
+    norminette_status = "✓" if norminette_result['success'] else "✗"
+    print(f"{'Norminette (flake8)':25}: {norminette_status}")
+    
     for name, result in results:
         print(f"{name:25}: {result['passed']}/{result['total']}")
     
     print(f"{Colors.YELLOW}{'=' * 40}{Colors.NC}")
     
-    if total_passed == total_tests and total_tests > 0:
+    # Overall success requires both norminette and tests to pass
+    all_success = (total_passed == total_tests and total_tests > 0 and norminette_result['success'])
+    
+    if all_success:
         print(f"{Colors.GREEN}TOTAL: {total_passed}/{total_tests} individual tests passed ✓{Colors.NC}")
+        print(f"{Colors.GREEN}All checks passed! ✓{Colors.NC}")
         return 0
     else:
-        print(f"{Colors.RED}TOTAL: {total_passed}/{total_tests} individual tests passed ✗{Colors.NC}")
+        print(f"{Colors.RED}TOTAL: {total_passed}/{total_tests} individual tests passed {'✓' if total_passed == total_tests else '✗'}{Colors.NC}")
+        if not norminette_result['success']:
+            print(f"{Colors.RED}Norminette check failed ✗{Colors.NC}")
         return 1
 
 if __name__ == '__main__':
