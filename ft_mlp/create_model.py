@@ -2,7 +2,7 @@ import json as json
 import pandas as pd
 from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
-from .model_utils import he_initialisation
+from .initializer import he_initialisation
 from .preprocessing import split_dataset, standardize_df
 
 
@@ -188,6 +188,16 @@ def fill_model_datasets(
       dict: Model parameters populated with training and validation datasets
     """
     df = pd.read_csv(dataset)
+    
+    # Auto-detect features if not provided
+    if features is None:
+        # Get all columns except target and any 'id' columns
+        all_columns = list(df.columns)
+        features = [col for col in all_columns if col != target and col.lower() != 'id']
+        # Update the model with auto-detected features
+        model['features'] = features
+        model['input']['shape'] = len(features)
+    
     filtered_df = pd.DataFrame(df[features + [target]])
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
