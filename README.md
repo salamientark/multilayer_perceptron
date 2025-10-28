@@ -1,4 +1,4 @@
-# multilayer perceptron
+# Multilayer perceptron
 
 Goal of the project is described in multilayer_perceptron.pdf
 
@@ -19,3 +19,12 @@ redundancy and predictive power
 - We devide the dataset into two parts (train_dataset, test_dataset).
 We'll use a optionnal argument that will be the seed of the dataset shuffle.
 Those will allow to reproduce same splitting.
+
+## How to use
+First you must create the python environment locally, install dependencies and activate this virtual enviroment for the curret session.
+```bash
+make
+source .venv/bin/activate
+```
+
+

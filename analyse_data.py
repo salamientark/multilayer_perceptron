@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 import ft_mlp as ft_mlp
+import matplotlib as mlp
 from matplotlib import pyplot as plt
 import seaborn as sns
 
@@ -41,12 +42,6 @@ data_columns_names = [
 ]
 
 
-# COLORS
-RED = '\033[91m'
-GREEN = '\033[92m'
-RESET = '\033[0m'
-
-
 def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
     """Draw pairplot for each features in the dataframe.
 
@@ -73,7 +68,7 @@ def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
             df, hue=target_col, vars=features,
             plot_kws={'alpha': 0.5, 's': 5})
     else:
-        plot = sns.pairplot(df[features],
+        plot = sns.pairplot(pd.DataFrame(df[features]),
                             plot_kws={'alpha': 0.5, 's': 5})
     for ax in plot.axes.flatten():
         if ax is not None and ax.get_ylabel():
@@ -84,10 +79,11 @@ def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
     plt.subplots_adjust(hspace=0.7, wspace=0.7, left=0.1,
                         right=0.9, top=0.95, bottom=0.1)
     manager = plt.get_current_fig_manager()
-    manager.full_screen_toggle()
+    if manager is not None:
+        manager.full_screen_toggle()
     plt.show()
-    plt.rcParams.update(plt.rcParamsDefault)
-    print(f"{GREEN} Success{RESET}")
+    plt.rcParams.update(mlp.rcParamsDefault)
+    print(f"{ft_mlp.GREEN} Success{ft_mlp.RESET}")
 
 
 def heatmap(df: pd.DataFrame):
@@ -97,14 +93,17 @@ def heatmap(df: pd.DataFrame):
       df (pandas.DataFrame): DataFrame to use for correlation matrix
     """
     corr_matrix = ft_mlp.correlation_matrix(df)
-    corr_df = pd.DataFrame(corr_matrix, columns=data_columns_names[2:]
-                           + ['diagnosis'])  # back to df
-    ax = sns.heatmap(corr_df, cmap="Blues", yticklabels=corr_df.columns,
-                     xticklabels=corr_df.columns)
-    ax.set_position([0.2, 0.2, 0.58, 0.7])
+    corr_df = pd.DataFrame(corr_matrix,
+                           columns=data_columns_names[2:] +
+                           ['diagnosis'])  # type: ignore
+    ax = sns.heatmap(corr_df, cmap="Blues",
+                     yticklabels=corr_df.columns.to_list(),
+                     xticklabels=corr_df.columns.to_list())
+    ax.set_position((0.2, 0.2, 0.58, 0.7))
     manager = plt.get_current_fig_manager()
-    manager.full_screen_toggle()
-    plt.rcParams.update(plt.rcParamsDefault)
+    if manager is not None:
+        manager.full_screen_toggle()
+    plt.rcParams.update(mlp.rcParamsDefault)
     plt.show()
 
 
@@ -124,7 +123,7 @@ def main(ac: int, av: list):
 
         # Extract data and target
         raw_data = df.drop(["id", "diagnosis"], axis=1)
-        raw_target = df["diagnosis"]
+        raw_target = pd.Series(df["diagnosis"])
 
         # Standardize data
         standardized_data = ft_mlp.standardize_df(raw_data)
@@ -146,7 +145,7 @@ def main(ac: int, av: list):
         standardized_data['diagnosis'] = numeric_target
         heatmap(standardized_data)
     except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
 
 
 if __name__ == "__main__":

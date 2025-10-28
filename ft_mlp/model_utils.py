@@ -208,6 +208,8 @@ def save_model(filename: str, model: dict):
     model_template['loss'] = FUNCTION_NAME[model['loss']]
     model_template['seed'] = model['seed']
     model_template['optimizer'] = model['optimizer']
+    model_template['features'] = model['features']
+    model_template['target'] = model['target']
 
     model_template['input'] = {}
     model_template['input']['shape'] = model['input']['shape']

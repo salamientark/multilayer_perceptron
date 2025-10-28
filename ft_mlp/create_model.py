@@ -37,8 +37,9 @@ def init_model_template() -> dict:
             'loss': None,         # Loss function to optimize
             'seed': None,
             'optimizer': None,
+            'features': None,
+            'target': None,
             'input': {
-                # 'features': [],
                 'shape': None,
                 },        # Input layer configuration
             'layers': [],         # List of hidden layer configurations
@@ -90,12 +91,16 @@ def fill_model_from_json(model: dict, config_file) -> dict:
     """
     conf = json.load(config_file)
     simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs',
-                   'optimizer']
+                   'features', 'target']
     input_keys = model['input'].keys()
     layer_keys = model['output'].keys()
     function_keys = ['activation', 'weights_initializer', 'loss']
     for k, _ in conf.items():
-        if k in conf and conf[k] is not None:
+        if k == 'model' or k == 'optimizer':
+            continue
+        if k in model:
+            if conf[k] is None:
+                continue
             if k in simple_keys:
                 model[k] = (conf[k] if k not in function_keys
                             else FUNCTION_MAP[conf[k]])
@@ -115,6 +120,10 @@ def fill_model_from_json(model: dict, config_file) -> dict:
                             for sub_k, val in layer.items() if sub_k
                              in layer_keys}
                             for layer in conf[k]]
+        else:
+            raise KeyError(f"Invalid key '{k}' in configuration file.")
+    if model['features'] is not None:
+        model['input']['shape'] = len(model['features'])
     return model
 
 
@@ -147,8 +156,12 @@ def fill_model_from_param(args, model: dict) -> dict:
             } for n in args.shape]
     # Fill model from args.features
     if args.features is not None:
-        model['input']['features'] = args.features
-        model['input']['shape'] = len(model['input']['features'])
+        model['features'] = args.features
+        model['input']['shape'] = len(model['features'])
+
+    # Fill model output shape
+    if model['output']['activation'] is None:
+        model['output']['weights_initializer'] = he_initialisation
     return model
 
 
@@ -158,7 +171,7 @@ def fill_model_datasets(
         training_rate: float,
         seed: int,
         target: str,
-        features: list = []
+        features: list
         ) -> dict:
     """Split dataset and fill model with training and validation set
 
@@ -168,15 +181,13 @@ def fill_model_datasets(
       training_rate (float): Ratio of the dataset to use for training
       seed (int): Seed for random operations to ensure reproducibility
       features (list, optional): List of feature column names to use.
-                                 If empty, uses model['input']['features'].
+                                 If empty, uses model['features'].
       target (str): Name of the target column in the dataset``
 
     Returns:
       dict: Model parameters populated with training and validation datasets
     """
     df = pd.read_csv(dataset)
-    if not features:
-        features = model['input']['features']
     filtered_df = pd.DataFrame(df[features + [target]])
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
@@ -185,10 +196,11 @@ def fill_model_datasets(
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
     model['output']['shape'] = filtered_df[target].nunique()
+    model['target'] = target
     return model
 
 
-def create_model(args, target: str, features: list = []):
+def create_model(args, target: str, features: list | None = None) -> dict:
     """Create and initialize model parameters
 
     Parameters:
@@ -198,16 +210,26 @@ def create_model(args, target: str, features: list = []):
                                  If empty, uses model['input']['features'].
     """
     model = init_model_template()
+    model['features'] = features
+    if features is not None:
+        model['input']['shape'] = len(features)
     if args.conf is not None:
         model = fill_model_from_json(model, args.conf)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
-                                model['seed'], target, features)
+                                model['seed'], target, model['features'])
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
-    model['optimizer'] = ('mini-batch' if model['batch'] is not None
-                          else 'stochastic')
+    if model['batch'] is not None:
+        if 1 < model['batch'] < len(model['input']['train_data']):
+            model['optimizer'] = 'mini-batch'
+        elif model['batch'] >= len(model['input']['train_data']):
+            model['batch'] = len(model['input']['train_data'])
+            model['optimizer'] = 'batch'
+        elif model['batch'] == 1:
+            model['optimizer'] = 'stochastic'
+
     # Set derivatives for each layer
     for layer in model['layers']:
         layer['derivative'] = DERIVATIVE_MAP[layer['activation']]

@@ -16,9 +16,15 @@
 
 ## Predicting
 - [x] Update model template to remove data_* fields
-- [ ] Fix optimizer field based on batch size
 - [x] Implement model weight + layer dimension verification
-- [ ] Fix one_encode function to one_encode(data: Series | list) -> np.ndarray
-- [ ] Implement data compatibility check (column count)
-- [ ] Implement predict functionality
-- [ ] Create predict.py program
+- [x] Implement predict functionality
+- [x] Create predict.py program
+
+## Bug Fixes & Testing
+- [x] Fix model optimizer field
+- [ ] Test
+
+## Model Enhancement
+- [ ] Add features field when saving/loading models
+- [ ] Add feature selector from json
+
