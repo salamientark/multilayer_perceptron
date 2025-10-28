@@ -23,6 +23,7 @@
 ## Bug Fixes & Testing
 - [x] Fix model optimizer field
 - [ ] Test
+- [ ] Change parser file type to str instead of IO file
 
 ## Model Enhancement
 - [ ] Add features field when saving/loading models
