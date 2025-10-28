@@ -18,6 +18,8 @@ NC = \033[0m # No Color
 all: $(VENV_DIR)
 	@echo -e "$(GREEN)[INFO]$(NC) Setting up virtual environment and dependencies..."
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Project setup complete!"
+	@echo -e "$(GREEN)[INFO]$(NC) To use the virtual environment, run:"
+	@echo -e "$(YELLOW)source .venv/bin/activate$(NC)"
 
 $(VENV_DIR):
 	@echo -e "$(YELLOW)[INFO]$(NC) Creating virtual environment..."

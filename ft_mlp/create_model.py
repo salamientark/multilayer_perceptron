@@ -193,6 +193,9 @@ def create_model(args, target: str, features: list = []):
 
     Parameters:
       args (argparse.Namespace): Parsed program arguments
+      target (str): Name of the target column in the dataset
+      features (list, optional): List of feature column names to use.
+                                 If empty, uses model['input']['features'].
     """
     model = init_model_template()
     if args.conf is not None:
