@@ -74,7 +74,6 @@ def main():
     test_modules = [
         ('tests.test_arg_parser', 'Argument Parser'),
         ('tests.test_create_model', 'Model Creation'),
-        ('tests.test_create_models', 'Training Functionality')
     ]
     
     total_tests = 0

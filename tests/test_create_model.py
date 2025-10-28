@@ -140,3 +140,39 @@ class TestCreateModel(unittest.TestCase):
         with self.assertRaises(KeyError):
             with open(config_file_path, 'r') as config_file:
                 fill_model_from_json(template, config_file)
+
+    def test_create_model_no_features(self):
+        """Test that create_model auto-detects features when features=None"""
+        args = argparse.Namespace(
+            conf=None,
+            epoch=100,
+            alpha=0.001,
+            train_ratio=0.8,
+            batch=32,
+            loss='categoricalCrossentropy',
+            seed=42,
+            optimizer='mini-batch',
+            shape=[128, 64, 32],
+            features=None,
+            dataset='tests/test_data/data_training.csv'
+        )
+        target = 'diagnosis'
+        result = create_model(args, target)
+        
+        # Test that features were auto-detected (all columns except target and id)
+        expected_features = [
+            'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 
+            'smoothness_mean', 'compactness_mean', 'concavity_mean', 
+            'concave_points_mean', 'symmetry_mean', 'fractal_dimension_mean',
+            'radius_std', 'texture_std', 'perimeter_std', 'area_std', 
+            'smoothness_std', 'compactness_std', 'concavity_std', 
+            'concave_points_std', 'symmetry_std', 'fractal_dimension_std',
+            'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst', 
+            'smoothness_worst', 'compactness_worst', 'concavity_worst', 
+            'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst'
+        ]
+        
+        self.assertEqual(result['features'], expected_features)
+        self.assertEqual(result['input']['shape'], len(expected_features))
+        self.assertIsNotNone(result['input']['train_data'])
+        self.assertIsNotNone(result['input']['test_data'])
