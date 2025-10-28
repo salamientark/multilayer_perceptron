@@ -1,0 +1,36 @@
+{
+    "model": "multilayer perceptron",
+    "alpha": 0.123,
+    "epoch": 123,
+    "batch": 12,
+    "seed": 32,
+    "features": [
+		"radius_mean",
+		"texture_mean",
+		"perimeter_mean",
+		"area_mean",
+		"smoothness_mean",
+		"compactness_mean",
+		"concavity_mean",
+		"concave_points_mean",
+		"symmetry_mean",
+		"fractal_dimension_mean"
+	],
+    "target": "diagnosis",
+    "output": {
+        "activation": "softmax",
+        "weights_initializer": "heUniform"
+    },
+    "layers": [
+        {
+            "shape": 24,
+            "activation": "sigmoid",
+            "weights_initializer": "heUniform"
+        },
+        {
+            "shape": 5,
+            "activation": "sigmoid",
+	        "weights_initializer": "heUniform"
+        }
+    ]
+}
