@@ -94,8 +94,6 @@ def validate_args(args):
         raise Exception("Enter value for --train_ratio/-tr.")
     if args.conf is None and args.alpha is None:
         raise Exception("Enter value for --learning_rate/-a.")
-    if args.conf is None and args.batch is None:
-        raise Exception("Enter value for --batch/-b.")
     if (args.layer is None) != (args.neurons is None):
         raise Exception("--layer and --neurons MUST be used together")
     if args.shape is None and args.layer is None and args.conf is None:

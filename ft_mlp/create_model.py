@@ -229,6 +229,9 @@ def create_model(args, target: str, features: list | None = None) -> dict:
             model['optimizer'] = 'batch'
         elif model['batch'] == 1:
             model['optimizer'] = 'stochastic'
+    else:
+        model['batch'] = len(model['input']['train_data'])
+        model['optimizer'] = 'batch'
 
     # Set derivatives for each layer
     for layer in model['layers']:

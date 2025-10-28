@@ -5,7 +5,12 @@ PIP = $(VENV_DIR)/bin/pip
 FLAKE8 = $(VENV_DIR)/bin/flake8
 
 # Find all Python files in the project
-PY_FILES = $(shell find . -name "*.py" -not -path "./$(VENV_DIR)/*")
+PY_FILES := ft_mlp/*.py \
+	analyse_data.py \
+	split_dataset.py \
+	train.py \
+	predict.py
+			
 
 # Colors for output
 GREEN = \033[0;32m
