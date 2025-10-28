@@ -29,3 +29,26 @@
 - [ ] Add features field when saving/loading models
 - [ ] Add feature selector from json
 
+## Bonus Features
+> **Note**: Bonus features will only be implemented after the mandatory part is PERFECT
+
+### Advanced Optimization
+- [ ] Implement advanced optimization functions beyond basic gradient descent
+  - [ ] Nesterov momentum optimizer
+  - [ ] RMSprop optimizer  
+  - [ ] Adam optimizer
+
+### Enhanced Visualization & Analysis
+- [ ] Add display of multiple learning curves on the same graph for model comparison
+- [ ] Implement training metrics history tracking and storage
+- [ ] Evaluate learning phase with multiple metrics (beyond loss)
+  - [ ] Accuracy tracking
+  - [ ] Precision, Recall, F1-score
+  - [ ] ROC-AUC metrics
+
+### Training Improvements
+- [ ] Add early stopping functionality to prevent overfitting
+  - [ ] Monitor validation loss plateau
+  - [ ] Configurable patience parameter
+  - [ ] Best model checkpoint saving
+
