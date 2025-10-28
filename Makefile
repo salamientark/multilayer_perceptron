@@ -42,7 +42,7 @@ norminette: $(VENV_DIR)
 		$(FLAKE8) $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; \
 	fi
 
-test: $(VENV_DIR)
+test: norminette
 	@$(PYTHON) scripts/run_tests.py $(PYTHON)
 
 clean:

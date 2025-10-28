@@ -171,7 +171,7 @@ def fill_model_datasets(
         training_rate: float,
         seed: int,
         target: str,
-        features: list
+        features: list | None = None
         ) -> dict:
     """Split dataset and fill model with training and validation set
 
@@ -181,13 +181,16 @@ def fill_model_datasets(
       training_rate (float): Ratio of the dataset to use for training
       seed (int): Seed for random operations to ensure reproducibility
       features (list, optional): List of feature column names to use.
-                                 If empty, uses model['features'].
+                                 If empty, uses every column except target
       target (str): Name of the target column in the dataset``
 
     Returns:
       dict: Model parameters populated with training and validation datasets
     """
     df = pd.read_csv(dataset)
+    if features is None:
+        features = [col for col in df.columns
+                    if col != target and col != 'id']
     filtered_df = pd.DataFrame(df[features + [target]])
     standardized_data = standardize_df(filtered_df)
     model['data_train'], model['data_test'] = split_dataset(
@@ -196,6 +199,8 @@ def fill_model_datasets(
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
     model['output']['shape'] = filtered_df[target].nunique()
+    model['features'] = features
+    model['input']['shape'] = len(features)
     model['target'] = target
     return model
 
@@ -210,8 +215,8 @@ def create_model(args, target: str, features: list | None = None) -> dict:
                                  If empty, uses model['input']['features'].
     """
     model = init_model_template()
-    model['features'] = features
     if features is not None:
+        model['features'] = features
         model['input']['shape'] = len(features)
     if args.conf is not None:
         model = fill_model_from_json(model, args.conf)
