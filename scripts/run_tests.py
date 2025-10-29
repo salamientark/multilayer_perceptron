@@ -110,6 +110,7 @@ def main():
     test_modules = [
         ('tests.test_arg_parser', 'Argument Parser'),
         ('tests.test_create_model', 'Model Creation'),
+        ('tests.test_fill_model_optimizer', 'Create_model subfonction')
     ]
     
     total_tests = 0

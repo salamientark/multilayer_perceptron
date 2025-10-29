@@ -166,6 +166,10 @@ def check_model(model: dict):
                 is not ft_mlp.he_initialisation):
             raise Exception("All hidden layers must use HeUniform "
                             "initialization.")
+        if model['optimizer'] in ['nesterov']:
+            if layer['velocity'].shape != layer['weights'].shape:
+                raise Exception("Nesterov optimizer requires velocity to be "
+                                "initialized to weights.")
 
 
 def init_model_weights_and_bias(model: dict) -> dict:
@@ -184,15 +188,18 @@ def init_model_weights_and_bias(model: dict) -> dict:
         if i == 0:
             layer['weights'], layer['bias'] = layer['weights_initializer'](
                     model['input']['shape'], layer['shape'], seed, data_inputs)
-            continue
-        layer['weights'], layer['bias'] = layer['weights_initializer'](
-                model['layers'][i - 1]['shape'], layer['shape'], seed,
-                data_inputs)
+        else:
+            layer['weights'], layer['bias'] = layer['weights_initializer'](
+                    model['layers'][i - 1]['shape'], layer['shape'], seed,
+                    data_inputs)
+        if model['optimizer'] in ['nesterov']:
+            layer['velocity'] = np.zeros(layer['weights'].shape)
     model['output']['weights'], model['output']['bias'] = \
         model['output']['weights_initializer'](
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
+    model['output']['velocity'] = np.zeros(model['output']['weights'].shape)
     model['train_truth'] = ft_mlp.one_encode(model['data_train'],
                                              TARGET)
     model['test_truth'] = ft_mlp.one_encode(model['data_test'],
@@ -446,8 +453,8 @@ def main(args: ap.Namespace):
     """
     features = args.features if args.features is not None else FEATURES
     model = ft_mlp.create_model(args, TARGET, features)
-    check_model(model)  # Validate model inputs
     init_model_weights_and_bias(model)  # Init model weights and bias
+    check_model(model)  # Validate model inputs
     train(model)
     ft_mlp.save_weights("weights.npz", model)
     ft_mlp.save_model("trained_model.json", model)

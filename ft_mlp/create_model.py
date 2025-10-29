@@ -10,7 +10,7 @@ from .preprocessing import split_dataset, standardize_df
 OPTIMIZER_FUNCTION_NAME = [
         'adams',
         'RMSprop',
-        'nesterov'
+        'nesterov',
         'batch_gradient_descent',
         'stochastic',
         'mini-batch'
@@ -242,9 +242,7 @@ def fill_model_optimizer(model: dict):
     model['total_batch'] = ceil(len(model['input']['train_data']) /
                                 model['batch'])
 
-    # Set optimizer type based on batch size
-    if model['optimizer'] in OPTIMIZER_FUNCTION_NAME:
-        return
+    # Standard gradient descent
     if model['optimizer'] is None:
         if 1 < model['batch'] < len(model['input']['train_data']):
             model['optimizer'] = 'mini-batch'
@@ -252,8 +250,11 @@ def fill_model_optimizer(model: dict):
             model['optimizer'] = 'batch_gradient_descent'
         else:
             model['optimizer'] = 'stochastic'
-        return
-    raise ValueError(f"Invalid optimizer '{model['optimizer']}' specified.")
+
+    # Set optimizer type based on batch size
+    if model['optimizer'] not in OPTIMIZER_FUNCTION_NAME:
+        raise ValueError(f"Invalid optimizer '{model['optimizer']}' "
+                         "specified.")
 
 
 def create_model(args, target: str, features: list | None = None) -> dict:
