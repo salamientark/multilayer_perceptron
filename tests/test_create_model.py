@@ -129,8 +129,7 @@ class TestCreateModel(unittest.TestCase):
                 }
             ]
         }
-        with open(config_file_path, 'r') as config_file:
-            result = fill_model_from_json(template, config_file)
+        result = fill_model_from_json(template, config_file_path)
         self.assertDictEqual(result, expected)
 
     def test_invalid_fill_model_from_json_to_much_values(self):
@@ -138,8 +137,7 @@ class TestCreateModel(unittest.TestCase):
         template = init_model_template()
         config_file_path = "tests/test_data/invalid_model_config_to_much_key.json"
         with self.assertRaises(KeyError):
-            with open(config_file_path, 'r') as config_file:
-                fill_model_from_json(template, config_file)
+                fill_model_from_json(template, config_file_path)
 
     def test_create_model_no_features(self):
         """Test that create_model auto-detects features when features=None"""

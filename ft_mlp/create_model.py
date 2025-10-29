@@ -11,6 +11,9 @@ OPTIMIZER_FUNCTION_NAME = [
         'adams',
         'RMSprop',
         'nesterov'
+        'batch_gradient_descent',
+        'stochastic',
+        'mini-batch'
         ]
 
 
