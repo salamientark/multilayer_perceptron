@@ -168,7 +168,7 @@ def check_model(model: dict):
                             "initialization.")
 
 
-def init_model(model: dict) -> dict:
+def init_model_weights_and_bias(model: dict) -> dict:
     """Initialize model weights and bias
 
     Parameters:
@@ -336,21 +336,25 @@ def train(model: dict):
     Parameters:
       model (dict): Model parameters to train
     """
+    # Init train
+    loss = model['loss']
+    features = model['features']
+    batch_size = model['batch']
+    total_batch = ceil(len(model['input']['train_data']) / batch_size)
+    batch_indexes = ft_mlp.get_random_batch_indexes(
+            model['data_train'].shape[0])
+
     # Print param
     print("data_train shape:", model['data_train'].shape)
     print("data_validation shape:", model['data_test'].shape)
-    loss = model['loss']
-    features = model['features']
+
     for i in range(model['epoch']):
-        # Batch handling
-        batch_size = model['batch']
-        batch_indexes = ft_mlp.get_random_batch_indexes(
-                model['data_train'].shape[0])
+        # Init batch handling
         batch = batch_indexes[:batch_size]
-        total_batch = ceil(len(model['input']['train_data']) / batch_size)
         last_index = batch_size
         epoch_train_loss = 0.0
         epoch_train_acc = 0.0
+
         # Train part
         while batch.size > 0:
             # Init
@@ -442,8 +446,9 @@ def main(args: ap.Namespace):
     """
     features = args.features if args.features is not None else FEATURES
     model = ft_mlp.create_model(args, TARGET, features)
+    print('ok')
     check_model(model)  # Validate model inputs
-    init_model(model)  # Init model weights and bias
+    init_model_weights_and_bias(model)  # Init model weights and bias
     train(model)
     ft_mlp.save_weights("weights.npz", model)
     ft_mlp.save_model("trained_model.json", model)
