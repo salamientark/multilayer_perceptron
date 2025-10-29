@@ -103,3 +103,7 @@ def mini_batch_gradient_descent(thetas: np.ndarray,
         gradient = np.dot(errors, data_batch) / len(data_batch)
         new_thetas -= alpha * gradient
     return new_thetas
+
+
+# def nesterov_mementum f(self):
+#     pass

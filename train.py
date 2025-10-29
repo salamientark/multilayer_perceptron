@@ -2,7 +2,6 @@ import argparse as ap
 import numpy as np
 import ft_mlp as ft_mlp
 import matplotlib.pyplot as plt
-from math import ceil
 
 
 # DEFAULT VALUES
@@ -136,7 +135,8 @@ def check_model(model: dict):
     if model['data_train'] is None or model['data_test'] is None:
         raise Exception("Training and validation datasets must be provided.")
     if model['optimizer'] is None or model['optimizer'] not in \
-            ['mini-batch', 'stochastic', 'batch']:
+            ['mini-batch', 'stochastic', 'batch_gradient_descent',
+             'adams', 'RMSprop', 'nesterov']:
         raise Exception("Optimizer must be mini-batch or stochastic.")
     if model['input']['shape'] is None or model['input']['shape'] <= 0:
         raise Exception("Input layer must have a positive number of neurons.")
@@ -340,7 +340,7 @@ def train(model: dict):
     loss = model['loss']
     features = model['features']
     batch_size = model['batch']
-    total_batch = ceil(len(model['input']['train_data']) / batch_size)
+    total_batch = model['total_batch']
     batch_indexes = ft_mlp.get_random_batch_indexes(
             model['data_train'].shape[0])
 
@@ -446,7 +446,6 @@ def main(args: ap.Namespace):
     """
     features = args.features if args.features is not None else FEATURES
     model = ft_mlp.create_model(args, TARGET, features)
-    print('ok')
     check_model(model)  # Validate model inputs
     init_model_weights_and_bias(model)  # Init model weights and bias
     train(model)

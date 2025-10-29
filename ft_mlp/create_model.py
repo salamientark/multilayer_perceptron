@@ -1,9 +1,29 @@
 import json as json
 import pandas as pd
+from math import ceil
 from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
 from .initializer import he_initialisation
 from .preprocessing import split_dataset, standardize_df
+
+
+OPTIMIZER_FUNCTION_NAME = [
+        'adams',
+        'RMSprop',
+        'nesterov'
+        ]
+
+
+TARGET_SIMPLE_KEY = [
+        'alpha',
+        'epoch',
+        'batch',
+        'seed',
+        'loss',
+        'features',
+        'target',
+        'optimizer'
+        ]
 
 
 FUNCTION_MAP = {
@@ -79,24 +99,24 @@ def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
     return layer
 
 
-def fill_model_from_json(model: dict, config_file) -> dict:
+def fill_model_from_json(model: dict, filename: str) -> dict:
     """Initalize model structure from provided json file
 
     Parameters:
       model (dict): Base model template to fill with configuration values
-      config_file: File object containing JSON configuration data
+      filename (str): Path to JSON configuration file
 
     Return:
       dict: Model Parameters populated from JSON configuration
     """
-    conf = json.load(config_file)
-    simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs',
-                   'features', 'target']
+    with open(filename, 'r') as f:
+        conf = json.load(f)
+    simple_keys = TARGET_SIMPLE_KEY
     input_keys = model['input'].keys()
     layer_keys = model['output'].keys()
     function_keys = ['activation', 'weights_initializer', 'loss']
     for k, _ in conf.items():
-        if k == 'model' or k == 'optimizer':
+        if k == 'model':
             continue
         if k in model:
             if conf[k] is None:
@@ -205,6 +225,34 @@ def fill_model_datasets(
     return model
 
 
+def fill_model_optimizer(model: dict):
+    """Set model optimizer based on batch size
+
+    Used in create model to add momentum matrix if needed
+
+    Parameters:
+      model (dict): Model parameters to fill with optimizer details
+    """
+    # Batch clip
+    if model['batch'] >= len(model['input']['train_data']):
+        model['batch'] = len(model['input']['train_data'])
+    model['total_batch'] = ceil(len(model['input']['train_data']) /
+                                model['batch'])
+
+    # Set optimizer type based on batch size
+    if model['optimizer'] in OPTIMIZER_FUNCTION_NAME:
+        return
+    if model['optimizer'] is None:
+        if 1 < model['batch'] < len(model['input']['train_data']):
+            model['optimizer'] = 'mini-batch'
+        elif model['batch'] >= len(model['input']['train_data']):
+            model['optimizer'] = 'batch_gradient_descent'
+        else:
+            model['optimizer'] = 'stochastic'
+        return
+    raise ValueError(f"Invalid optimizer '{model['optimizer']}' specified.")
+
+
 def create_model(args, target: str, features: list | None = None) -> dict:
     """Create and initialize model parameters
 
@@ -223,20 +271,10 @@ def create_model(args, target: str, features: list | None = None) -> dict:
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
                                 model['seed'], target, model['features'])
+    fill_model_optimizer(model)
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
-    if model['batch'] is not None:
-        if 1 < model['batch'] < len(model['input']['train_data']):
-            model['optimizer'] = 'mini-batch'
-        elif model['batch'] >= len(model['input']['train_data']):
-            model['batch'] = len(model['input']['train_data'])
-            model['optimizer'] = 'batch'
-        elif model['batch'] == 1:
-            model['optimizer'] = 'stochastic'
-    else:
-        model['batch'] = len(model['input']['train_data'])
-        model['optimizer'] = 'batch'
 
     # Set derivatives for each layer
     for layer in model['layers']:
@@ -254,6 +292,5 @@ def load_model_from_json(filename: str) -> dict:
       dict: Model parameters loaded from JSON file
     """
     model = init_model_template()
-    with open(filename, 'r') as f:
-        filled_model = fill_model_from_json(model, f)
+    filled_model = fill_model_from_json(model, filename)
     return filled_model
