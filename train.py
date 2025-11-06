@@ -319,6 +319,31 @@ def update_weights(
     model['output']['bias'] -= alpha * gradients[-1][1]
 
 
+def get_velocity(model: dict) -> np.ndarray:
+    """Get model velocity for optimizers that use it
+
+    Used in optimizers like Nesterov.
+
+    Parameters:
+      model (dict): Model parameters to get velocity from
+
+    Returns:
+      np.ndarray: Model velocity for each layer.
+    """
+    res = []
+    for layer in model['layers']:
+        res.append(layer['velocity'])
+    res.append(model['output']['velocity'])
+    return np.array(res)
+
+
+# def update_param_nesterov(model: dict):
+#     """Update model weights using Nesterov optimizer
+#
+#     Update velocity and weights. Using
+#     pass
+
+
 def print_training_state(epoch: int, model: dict):
     """Print training state for given epoch
 
