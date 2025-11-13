@@ -23,11 +23,15 @@
 ## Bug Fixes & Testing
 - [x] Fix model optimizer field
 - [ ] Test
-- [ ] Change parser file type to str instead of IO file
+- [x] Change parser file type to str instead of IO file
 
 ## Model Enhancement
-- [ ] Add features field when saving/loading models
-- [ ] Add feature selector from json
+- [x] Add features field when saving/loading models
+- [x] Add feature selector from json
+- [x] Rework velocity initialization for each layer
+- [x] Create weight velocity + bias velocity initialization
+- [ ] Add and check for mometum (beta) field in model when using optimizer like nesterov
+- [ ] Implement nestrov optimisation using Ilya optimisation for velocity and weight updates
 
 ## Bonus Features
 > **Note**: Bonus features will only be implemented after the mandatory part is PERFECT

@@ -3,8 +3,7 @@ import numpy as np
 import ft_mlp as ft_mlp
 import matplotlib.pyplot as plt
 
-
-# DEFAULT VALUES
+# DEFAULT VALUES 
 FEATURES = [
         'radius_mean', 'texture_mean', 'perimeter_mean',
         'area_mean', 'smoothness_mean', 'compactness_mean',
@@ -167,7 +166,7 @@ def check_model(model: dict):
             raise Exception("All hidden layers must use HeUniform "
                             "initialization.")
         if model['optimizer'] in ['nesterov']:
-            if layer['velocity'].shape != layer['weights'].shape:
+            if layer['w_velocity'].shape != layer['weights'].shape:
                 raise Exception("Nesterov optimizer requires velocity to be "
                                 "initialized to weights.")
 
@@ -193,13 +192,19 @@ def init_model_weights_and_bias(model: dict) -> dict:
                     model['layers'][i - 1]['shape'], layer['shape'], seed,
                     data_inputs)
         if model['optimizer'] in ['nesterov']:
-            layer['velocity'] = np.zeros(layer['weights'].shape)
+            layer['w_velocity'] = np.zeros(layer['weights'].shape)
+            layer['b_velocity'] = np.zeros(layer['bias'].shape)
     model['output']['weights'], model['output']['bias'] = \
         model['output']['weights_initializer'](
                 model['layers'][-1]['shape'], model['output']['shape'],
                 seed, data_inputs
             )
-    model['output']['velocity'] = np.zeros(model['output']['weights'].shape)
+
+    # Velocity update
+    if model['optimizer'] in ['nesterov']:
+        model['output']['w_velocity'] = np.zeros(model['output']['weights'].shape)
+        model['output']['b_velocity'] = np.zeros(model['output']['bias'].shape)
+
     model['train_truth'] = ft_mlp.one_encode(model['data_train'],
                                              TARGET)
     model['test_truth'] = ft_mlp.one_encode(model['data_test'],
@@ -319,7 +324,46 @@ def update_weights(
     model['output']['bias'] -= alpha * gradients[-1][1]
 
 
-def get_velocity(model: dict) -> np.ndarray:
+# def update_velocity(
+#         model: dict,
+#         v_old: np.ndarray,
+#         gradients: list[tuple[np.ndarray, np.ndarray]]
+#         ) -> None:
+#     """Update model velocity for optimizers that use it
+#
+#     Used in optimizers like Nesterov.
+#
+#     Parameters:
+#       model (dict): Model parameters to update velocity
+#       v_old (np.ndarray): Old model velocity
+#       gradients (list[tuple[np.ndarray]]): List of gradients for each layer
+#     """
+
+
+def calculate_velocity(
+        v_old: np.ndarray, 
+        gradients: list[tuple[np.ndarray, np.ndarray]],
+        alpha: float,
+        momentum: float) -> np.ndarray:
+    """Calculate model velocity for optimizers that use it
+
+    Used in optimizers like Nesterov.
+
+    Parameters:
+      v_old (np.ndarray): Old model velocity
+      gradients (list[tuple[np.ndarray]]): List of gradients for each layer
+      alpha (float): Learning rate
+      momentum (float): Momentum factor
+
+    Returns:
+      np.ndarray: Model new velocity for each layer.
+    """
+    v_new = []
+    for i in range(len(gradients)):
+        scaled_gradient = alpha * gradients
+
+
+def get_velocity(model: dict) -> dict:
     """Get model velocity for optimizers that use it
 
     Used in optimizers like Nesterov.
@@ -328,20 +372,37 @@ def get_velocity(model: dict) -> np.ndarray:
       model (dict): Model parameters to get velocity from
 
     Returns:
-      np.ndarray: Model velocity for each layer.
+      dict: Model velocity for each layer.
     """
-    res = []
-    for layer in model['layers']:
-        res.append(layer['velocity'])
-    res.append(model['output']['velocity'])
-    return np.array(res)
+    res = {}
+    for i, layer in enumerate(model['layers']):
+        w_key = "layer_" + str(i) + "_w_velocity"
+        b_key = "layer_" + str(i) + "_b_velocity"
+        res[w_key] = layer['w_velocity']
+        res[b_key] = layer['b_velocity']
+    res['output_w_velocity'] = model['output']['w_velocity']
+    res['output_b_velocity'] = model['output']['b_velocity']
+    return res
 
 
-# def update_param_nesterov(model: dict):
-#     """Update model weights using Nesterov optimizer
-#
-#     Update velocity and weights. Using
-#     pass
+def update_param_nesterov(
+        model: dict,
+        old_v: np.ndarray,
+        gradients: np.ndarray):
+    """Update model weights using Nesterov optimizer
+
+    Update velocity and weights. Using the Nesterov accelerated gradient
+    Parameters:
+      model (dict): Model parameters to update
+      old_v (np.ndarray): Model old velocity
+      gradients (np.ndarray): Calulated gradients
+    """
+    print("OK")
+    alpha = model['alpha']
+    beta = model['momentum']
+    scaled_old_v = beta * old_v
+    scaled_gradients = alpha * gradients
+    new_velocity = scaled_old_v - scaled_gradients
 
 
 def print_training_state(epoch: int, model: dict):
@@ -392,6 +453,8 @@ def train(model: dict):
             # Init
             inputs = model['input']['train_data'][batch]
             truth = model['train_truth'][batch]
+            old_velocity = (get_velocity(model) if model['optimizer'] == 
+                'nesterov' else None)
 
             # Train step
             result = feed_forward(model, inputs)
@@ -403,7 +466,10 @@ def train(model: dict):
                     result[-1],
                     truth)
             gradients = backpropagation(model, inputs, result, truth)
-            update_weights(model, gradients)
+            if model['optimizer'] == 'nesterov':
+                update_param_nesterov(model, old_velocity, gradients)
+            else:
+                update_weights(model, gradients)
 
             # Next batch
             batch = batch_indexes[last_index:last_index + batch_size]
@@ -480,6 +546,7 @@ def main(args: ap.Namespace):
     model = ft_mlp.create_model(args, TARGET, features)
     init_model_weights_and_bias(model)  # Init model weights and bias
     check_model(model)  # Validate model inputs
+    ft_mlp.print_model(model)
     train(model)
     ft_mlp.save_weights("weights.npz", model)
     ft_mlp.save_model("trained_model.json", model)
