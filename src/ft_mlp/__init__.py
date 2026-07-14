@@ -62,8 +62,7 @@ from .preprocessing import ( # noqa
         remove_missing,
         classify,
         standardize_array,
-        standardize_df,
-        split_dataset
+        standardize_df
         )
 from .colors import ( # noqa
         RED,

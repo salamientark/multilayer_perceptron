@@ -5,3 +5,6 @@
 *.npz
 *.json
 !./tests/
+.venv/
+dist/
+*.egg-info/

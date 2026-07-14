@@ -25,7 +25,7 @@ import unittest
 import sys
 import io
 import argparse
-from train import parse_args, validate_args
+from ft_mlp.train import parse_args, validate_args
 
 class TestArgParser(unittest.TestCase):
     """Test class for argument parsing functionality"""

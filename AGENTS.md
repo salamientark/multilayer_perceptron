@@ -1,11 +1,21 @@
 # Agent Guidelines - Multilayer Perceptron
 
+## Layout
+- Package lives in `src/ft_mlp/`, installed editable by `uv sync`
+- The four programs are modules of that package: `ft_mlp.train`, `ft_mlp.predict`,
+  `ft_mlp.split_dataset`, `ft_mlp.analyse_data`
+- Each is runnable as `uv run -m ft_mlp.<name>`, as `uv run src/ft_mlp/<name>.py`,
+  or as `python src/ft_mlp/<name>.py` with the venv activated
+
 ## Build/Test/Lint Commands
-- `python train.py --help` - Display training options and parameters
-- `python split_dataset.py` - Split dataset into training/validation sets
-- `python train.py --dataset data_training.csv` - Train the neural network
-- `python predict.py --model saved_model.npy --dataset data_test.csv` - Make predictions
-- No specific linting requirements (norm not applied per project specs)
+- `uv sync` (or `make`) - Create `.venv` and install dependencies from `uv.lock`
+- `make test` - Run flake8 + the full unit test suite
+- `make norminette` - Run flake8 on `src/ft_mlp/*.py`
+- `uv run -m ft_mlp.train --help` - Display training options and parameters
+- `uv run -m ft_mlp.split_dataset data.csv` - Split dataset into training/validation sets
+- `uv run -m ft_mlp.train --shape 24 16 --epoch 100 -a 0.1 -s 42 data_training.csv` - Train the neural network
+- `uv run -m ft_mlp.predict -m trained_model.json -w weights.npz -d data_validation.csv` - Make predictions
+- flake8 must pass (`make test` gates on it) even though 42's norm is not required
 
 ## Code Style Guidelines
 - **Language**: Pure Python 3 (no restrictions on language choice)

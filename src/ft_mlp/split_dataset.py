@@ -1,6 +1,7 @@
 import argparse as ap
 import pandas as pd
-from ft_mlp import split_dataset, RED, RESET, GREEN, BLUE
+from ft_mlp import RED, RESET, GREEN, BLUE
+from ft_mlp.preprocessing import split_dataset
 
 
 # Data columns name
@@ -128,6 +129,11 @@ def main(args):
         print(f"{RED}Error{RESET}: {e}")
 
 
-if __name__ == "__main__":
+def cli():
+    """Entry point for the command line."""
     args = parse_args()
     main(args)
+
+
+if __name__ == "__main__":
+    cli()

@@ -452,10 +452,15 @@ def main(args: ap.Namespace):
     return
 
 
-if __name__ == "__main__":
+def cli():
+    """Entry point for the command line."""
     args = parse_args()
     try:
         validate_args(args)
         main(args)
     except Exception as e:
         print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
+
+
+if __name__ == "__main__":
+    cli()
