@@ -20,6 +20,25 @@ DERIVATIVE_MAP = {
         }
 
 
+def get_function(name: str):
+    """Resolve a function name from a configuration file
+
+    Parameters:
+      name (str): Name of the function as written in the config file
+
+    Returns:
+      The matching function
+
+    Raises:
+      Exception: If the name is not a function the library implements
+    """
+    if name not in FUNCTION_MAP:
+        known = ', '.join(sorted(FUNCTION_MAP))
+        raise Exception(f"Unknown function '{name}' in the configuration "
+                        f"file. Known functions: {known}.")
+    return FUNCTION_MAP[name]
+
+
 def init_model_template() -> dict:
     """Initialize empty model template with default structure
 
@@ -79,19 +98,19 @@ def fill_model_from_json(model: dict, config_file) -> dict:
                 continue
             if k in simple_keys:
                 model[k] = (conf[k] if k not in function_keys
-                            else FUNCTION_MAP[conf[k]])
+                            else get_function(conf[k]))
             elif k == 'input':
-                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                model[k] = {sub_k: (get_function(val) if sub_k in function_keys
                                     else val)
                             for sub_k, val in conf[k].items()
                             if sub_k in input_keys}
             elif k == 'output':
-                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                model[k] = {sub_k: (get_function(val) if sub_k in function_keys
                                     else val)
                             for sub_k, val in conf[k].items() if sub_k
                             in layer_keys}
             else:  # output or layers
-                model[k] = [{sub_k: (FUNCTION_MAP[val] if sub_k
+                model[k] = [{sub_k: (get_function(val) if sub_k
                                      in function_keys else val)
                             for sub_k, val in layer.items() if sub_k
                              in layer_keys}
@@ -206,7 +225,9 @@ def create_model(args, target: str, features: list | None = None) -> dict:
         model['features'] = features
         model['input']['shape'] = len(features)
     if args.conf is not None:
-        model = fill_model_from_json(model, args.conf)
+        # args.conf is a path: fill_model_from_json needs an open file.
+        with open(args.conf, 'r') as config_file:
+            model = fill_model_from_json(model, config_file)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
                                 model['seed'], target, model['features'])
@@ -227,7 +248,12 @@ def create_model(args, target: str, features: list | None = None) -> dict:
 
     # Set derivatives for each layer
     for layer in model['layers']:
-        layer['derivative'] = DERIVATIVE_MAP[layer['activation']]
+        activation = layer['activation']
+        if activation not in DERIVATIVE_MAP:
+            name = getattr(activation, '__name__', activation)
+            raise Exception(f"No derivative is implemented for the '{name}' "
+                            "activation. Hidden layers must use sigmoid.")
+        layer['derivative'] = DERIVATIVE_MAP[activation]
     return model
 
 

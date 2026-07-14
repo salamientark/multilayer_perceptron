@@ -65,7 +65,8 @@ class TestCorrelationCoefficient(unittest.TestCase):
 
     def test_explicit_count_is_used(self):
         x = np.array([1.0, 2.0, 3.0, 4.0])
-        self.assertAlmostEqual(correlation_coefficient(x, x, count=len(x)), 1.0)
+        self.assertAlmostEqual(correlation_coefficient(x, x, count=len(x)),
+                               1.0)
 
 
 class TestCorrelationMatrix(unittest.TestCase):
@@ -200,7 +201,7 @@ class TestAnalyseDataProgram(unittest.TestCase):
 
     @mock.patch('ft_mlp.analyse_data.sns.pairplot')
     @mock.patch('ft_mlp.analyse_data.plt')
-    def test_pairplot_is_invoked_with_the_requested_features(self, plt, sns_pp):
+    def test_pairplot_is_invoked_with_features(self, plt, sns_pp):
         df = pd.read_csv(self.path, header=None)
         df.columns = analyse_module.data_columns_names
         analyse_module.pairplot(df, ['radius_mean', 'texture_mean'],

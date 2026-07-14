@@ -164,7 +164,8 @@ class TestStandardize(unittest.TestCase):
     def test_standardize_df_infers_columns_from_stats(self):
         stats = {'a': {'mean': 0.0, 'std': 1.0}}
         result = standardize_df(sample_df(), [], stats)
-        np.testing.assert_allclose(result['a'].to_numpy(), [1.0, 2.0, 3.0, 4.0])
+        np.testing.assert_allclose(result['a'].to_numpy(),
+                                   [1.0, 2.0, 3.0, 4.0])
         # 'b' was not in the stats, so it is untouched
         np.testing.assert_allclose(result['b'].to_numpy(),
                                    [10.0, 20.0, 30.0, 40.0])

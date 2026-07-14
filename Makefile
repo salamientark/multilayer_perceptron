@@ -2,8 +2,8 @@
 VENV_DIR = .venv
 UV = uv
 
-# Find all Python files in the project
-PY_FILES := src/ft_mlp/*.py
+# Find all Python files in the project (package, tests and helper scripts)
+PY_FILES := src tests scripts
 
 # Colors for output
 GREEN = \033[0;32m
@@ -30,7 +30,7 @@ norminette: $(VENV_DIR)
 	@if [ -z "$(PY_FILES)" ]; then \
 		echo -e "$(YELLOW)[WARNING]$(NC) No Python files found!"; \
 	else \
-		$(UV) run flake8 $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; \
+		$(UV) run flake8 $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || { echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; exit 1; }; \
 	fi
 
 test: $(VENV_DIR)

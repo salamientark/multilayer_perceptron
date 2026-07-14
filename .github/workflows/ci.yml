@@ -32,7 +32,6 @@ jobs:
     # Step 4: Run code quality checks
     - name: Run flake8 linting
       run: make norminette
-      continue-on-error: true  # Don't fail CI if linting has issues
 
     # Step 5: Verify test data files
     - name: Check test data files

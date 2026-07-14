@@ -13,7 +13,8 @@ import numpy as np
 
 from ft_mlp.network_layers import (sigmoid, sigmoid_derivative, softmax,
                                    hidden_layer)
-from ft_mlp.loss_functions import categorical_cross_entropy, binary_cross_entropy
+from ft_mlp.loss_functions import (categorical_cross_entropy,
+                                   binary_cross_entropy)
 from ft_mlp.initializer import he_initialisation
 from ft_mlp.model_utils import calculate_accuracy, calculate_loss_mean
 from ft_mlp.train import feed_forward, backpropagation, update_weights
@@ -48,7 +49,8 @@ class TestActivations(unittest.TestCase):
     def test_sigmoid_known_values(self):
         self.assertAlmostEqual(sigmoid(np.array([0.0]))[0], 0.5)
         self.assertAlmostEqual(sigmoid(np.array([1.0]))[0], 0.7310585786300049)
-        self.assertAlmostEqual(sigmoid(np.array([-1.0]))[0], 0.2689414213699951)
+        self.assertAlmostEqual(sigmoid(np.array([-1.0]))[0],
+                               0.2689414213699951)
 
     def test_sigmoid_is_bounded_and_monotonic(self):
         values = np.linspace(-50, 50, 200)

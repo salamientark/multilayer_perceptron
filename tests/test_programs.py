@@ -149,7 +149,7 @@ class TestProgramsEndToEnd(unittest.TestCase):
         self.assertGreaterEqual(len(saved['layers']), 2)
 
     def test_train_outfile_options_are_honoured(self):
-        """--outfile used to be silently ignored in favour of hardcoded names"""
+        """--outfile used to be ignored for hardcoded names"""
         self._split()
         train_csv = os.path.join(self.dir, 'data_training.csv')
         with argv('train.py', train_csv, '-e', '3',
@@ -162,6 +162,20 @@ class TestProgramsEndToEnd(unittest.TestCase):
                                                     'custom_weights.npz')))
         self.assertTrue(os.path.exists(os.path.join(self.dir,
                                                     'custom_model.json')))
+
+    def test_train_saves_the_learning_curves_to_a_file(self):
+        """Headless runs need an artifact: plt.show() alone gives nothing"""
+        self._split()
+        train_csv = os.path.join(self.dir, 'data_training.csv')
+        curves = os.path.join(self.dir, 'curves.png')
+        with argv('train.py', train_csv, '-e', '3', '-po', curves), \
+                mock.patch('matplotlib.pyplot.show') as show, \
+                contextlib.redirect_stdout(io.StringIO()):
+            train_module.cli()
+        self.assertTrue(os.path.exists(curves))
+        self.assertGreater(os.path.getsize(curves), 0)
+        # saving replaces the interactive window, it does not add to it
+        self.assertFalse(show.called)
 
     def test_train_with_layer_and_neurons(self):
         self._split()

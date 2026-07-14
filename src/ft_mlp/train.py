@@ -84,6 +84,10 @@ def parse_args():
                         default=DEFAULT_MODEL_FILE,
                         help="Model topology result file (json). "
                              f"(default: {DEFAULT_MODEL_FILE})")
+    parser.add_argument("--plot_outfile", "-po", type=str, default=None,
+                        help="Save the learning curves to this image file "
+                             "instead of opening a window (for machines "
+                             "without a display).")
     parser.add_argument("dataset", type=str,
                         help="Training dataset.")
     # Get args
@@ -394,11 +398,14 @@ def train(model: dict):
         print_training_state(i, model)
 
 
-def plot_loss_and_accuracy_curves(model: dict):
+def plot_loss_and_accuracy_curves(model: dict, outfile: str | None = None):
     """Plot loss curve  and accuracy for training and validation set
 
     Parameters:
       model (dict): Model parameters to use for plotting
+      outfile (str | None): If given, write the figure to this file instead
+                            of opening a window. Lets the curves be produced
+                            on a machine without a display.
     """
     train_loss = model['train_loss']
     test_loss = model['test_loss']
@@ -428,6 +435,13 @@ def plot_loss_and_accuracy_curves(model: dict):
     axes[1].set_xlim(0, model['epoch'] - 1)
     axes[1].legend()
 
+    if outfile is not None:
+        fig.savefig(outfile, dpi=120, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Saving learning curves to {ft_mlp.BLUE}{outfile}"
+              f"{ft_mlp.RESET}... {ft_mlp.GREEN}Success{ft_mlp.RESET}")
+        return
+
     manager = plt.get_current_fig_manager()
     if manager is not None:
         manager.full_screen_toggle()
@@ -449,7 +463,7 @@ def main(args: ap.Namespace):
     ft_mlp.save_weights(args.outfile, model)
     ft_mlp.save_model(args.model_outfile, model)
 
-    plot_loss_and_accuracy_curves(model)
+    plot_loss_and_accuracy_curves(model, args.plot_outfile)
     return
 
 

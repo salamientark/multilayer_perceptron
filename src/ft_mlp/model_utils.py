@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .ft_math import ft_argmax
 from .network_layers import sigmoid, softmax
 from .loss_functions import categorical_cross_entropy
 from .colors import BLUE, GREEN, RESET
@@ -162,8 +163,8 @@ def calculate_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
     Returns:
       float: Accuracy value
     """
-    prediction_indexes = np.argmax(predictions, axis=1)
-    truth_indexes = np.argmax(truth, axis=1)
+    prediction_indexes = ft_argmax(predictions)
+    truth_indexes = ft_argmax(truth)
     good_prediction = (prediction_indexes == truth_indexes)
     accuracy = np.sum(good_prediction) / len(good_prediction)
     return accuracy

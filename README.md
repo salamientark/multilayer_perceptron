@@ -79,6 +79,24 @@ uv run -m ft_mlp.train --shape 24 16 --epoch 100 --learning_rate 0.1 --seed 42 d
 uv run -m ft_mlp.predict --model trained_model.json --weights weights.npz --data data_validation.csv
 ```
 
+#### How the data is split
+
+There are two levels of splitting, which is deliberate:
+
+- `split_dataset` holds out `data_validation.csv`. That file is **never seen
+  during training** — not by the weights, and not by the standardization
+  statistics. It is what `predict` is evaluated on.
+- `train` splits the file it is given once more (`--train_ratio`, default 0.8)
+  into an inner training set and an inner validation set. The inner validation
+  set is what produces the per-epoch `val_loss` and the learning curves, and it
+  is what any hyperparameter choice is based on.
+
+So of the 569 samples: 455 go to `train`, which uses 364 to fit the weights and
+91 to watch for overfitting, and the remaining 114 stay untouched for `predict`.
+Standardization statistics are fitted on the inner training set alone and stored
+in `trained_model.json`, so `predict` rescales new data with the training
+statistics rather than recomputing them from whatever file it is handed.
+
 ## Project structure
 
 ```
@@ -174,6 +192,8 @@ uv run -m ft_mlp.train [OPTIONS] <dataset>
 - `--train_ratio`, `-tr`: Training/validation split ratio (default: 0.8)
 - `--outfile`, `-of`: Output filename for weights (default: "weights.npz")
 - `--model_outfile`, `-mo`: Output filename for the model topology (default: "trained_model.json")
+- `--plot_outfile`, `-po`: Save the learning curves to an image file instead of
+  opening a window. Use this on a machine without a display.
 
 **Examples:**
 ```bash

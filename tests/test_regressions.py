@@ -8,6 +8,7 @@ wrong numbers. They run the real pipeline on a small synthetic dataset.
 import argparse
 import contextlib
 import io
+import json
 import os
 import re
 import tempfile
@@ -18,7 +19,7 @@ import pandas as pd
 
 from ft_mlp.create_model import create_model
 from ft_mlp.preprocessing import one_encode, get_standardization_stats
-from ft_mlp.train import init_model, train, check_model
+from ft_mlp.train import init_model, train, check_model, validate_args
 from ft_mlp.model_utils import save_model
 from ft_mlp.create_model import load_model_from_json
 from ft_mlp.load_predict_model import load_predict_model_data
@@ -227,9 +228,10 @@ class TestStandardizationStats(unittest.TestCase):
         full_stats = get_standardization_stats(full, FEATURES)
         for feature in FEATURES:
             # the model's stats must reproduce the training split
-            self.assertNotAlmostEqual(model['standardization'][feature]['mean'],
+            model_mean = model['standardization'][feature]['mean']
+            self.assertNotAlmostEqual(model_mean,
                                       full_stats[feature]['mean'], places=9,
-                                      msg="stats look fitted on the full set")
+                                      msg="stats look fitted on full set")
             # data_train is already standardized, so its mean is ~0
             self.assertAlmostEqual(train_stats[feature]['mean'], 0.0, places=6)
 
@@ -306,6 +308,101 @@ class TestStandardizationStats(unittest.TestCase):
         for feature in FEATURES:
             self.assertAlmostEqual(loaded['standardization'][feature]['mean'],
                                    model['standardization'][feature]['mean'])
+
+
+class TestJsonConfigPath(unittest.TestCase):
+    """create_model passed the --conf FILENAME straight to json.load(),
+    which needs an open file, so --conf never worked at all."""
+
+    def _write_conf(self, tmp, conf):
+        path = os.path.join(tmp, 'conf.json')
+        with open(path, 'w') as f:
+            json.dump(conf, f)
+        return path
+
+    def _base_conf(self):
+        return {
+            'model': 'multilayer perceptron',
+            'epoch': 3, 'alpha': 0.1, 'batch': 8, 'seed': 42,
+            'loss': 'categoricalCrossentropy',
+            'features': FEATURES, 'target': TARGET,
+            'layers': [
+                {'shape': 4, 'activation': 'sigmoid',
+                 'weights_initializer': 'heUniform'},
+                {'shape': 4, 'activation': 'sigmoid',
+                 'weights_initializer': 'heUniform'},
+                ],
+            'output': {'shape': 2, 'activation': 'softmax',
+                       'weights_initializer': 'heUniform'},
+            }
+
+    def _args(self, conf_path, dataset):
+        return argparse.Namespace(
+                conf=conf_path, shape=None, layer=None, neurons=None,
+                features=None, loss=None, epoch=None, alpha=None, batch=None,
+                seed=None, train_ratio=0.8, outfile='weights.npz',
+                dataset=dataset)
+
+    def test_conf_file_is_loaded_from_its_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = os.path.join(tmp, 'data.csv')
+            make_dataset(dataset)
+            conf = self._write_conf(tmp, self._base_conf())
+            model = create_model(self._args(conf, dataset), TARGET)
+        self.assertEqual(model['epoch'], 3)
+        self.assertEqual(model['seed'], 42)
+        self.assertEqual([layer['shape'] for layer in model['layers']], [4, 4])
+
+    def test_conf_values_are_not_overridden_by_cli_defaults(self):
+        """validate_args must not fill defaults when --conf is used"""
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = os.path.join(tmp, 'data.csv')
+            make_dataset(dataset)
+            spec = self._base_conf()
+            spec['epoch'] = 7
+            spec['alpha'] = 0.42
+            conf = self._write_conf(tmp, spec)
+            args = self._args(conf, dataset)
+            validate_args(args)
+            model = create_model(args, TARGET)
+        self.assertEqual(model['epoch'], 7)
+        self.assertAlmostEqual(model['alpha'], 0.42)
+
+    def test_conf_trains_end_to_end(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = os.path.join(tmp, 'data.csv')
+            make_dataset(dataset)
+            conf = self._write_conf(tmp, self._base_conf())
+            args = self._args(conf, dataset)
+            model = create_model(args, TARGET)
+            check_model(model)
+            init_model(model)
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                train(model)
+        self.assertIn('Epoch 3/3', out.getvalue())
+
+    def test_unknown_function_name_gives_a_clear_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = os.path.join(tmp, 'data.csv')
+            make_dataset(dataset)
+            spec = self._base_conf()
+            spec['loss'] = 'mse'
+            conf = self._write_conf(tmp, spec)
+            with self.assertRaises(Exception) as context:
+                create_model(self._args(conf, dataset), TARGET)
+        self.assertIn("Unknown function 'mse'", str(context.exception))
+
+    def test_activation_without_derivative_gives_a_clear_error(self):
+        """DERIVATIVE_MAP has only sigmoid: this used to be a raw KeyError"""
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = os.path.join(tmp, 'data.csv')
+            make_dataset(dataset)
+            spec = self._base_conf()
+            spec['layers'][0]['activation'] = 'softmax'
+            conf = self._write_conf(tmp, spec)
+            with self.assertRaises(Exception) as context:
+                create_model(self._args(conf, dataset), TARGET)
+        self.assertIn('No derivative is implemented', str(context.exception))
 
 
 class TestSplitterKeepsEveryRow(unittest.TestCase):
