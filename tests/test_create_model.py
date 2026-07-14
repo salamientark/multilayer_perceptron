@@ -58,6 +58,8 @@ class TestCreateModel(unittest.TestCase):
             'optimizer': None,
             'features': None,
             'target': None,
+            'classes': None,
+            'standardization': None,
             'input': {
                 'shape': None,
                 },

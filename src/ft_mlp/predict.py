@@ -1,6 +1,10 @@
 import argparse as ap
 import numpy as np
 import ft_mlp as ft_mlp
+# Imported directly: `ft_mlp.predict` resolves to THIS module rather than the
+# re-exported function as soon as the module is imported (as the ft-predict
+# console script does), which would make ft_mlp.predict(...) uncallable.
+from ft_mlp.network_layers import predict as nn_predict
 
 
 FEATURES = [
@@ -112,8 +116,8 @@ def main(args: ap.Namespace):
     verify_model(model)
 
     # Prediction
-    predictions = ft_mlp.predict(model, model['data'])
-    decoded_predictions = one_decoded(predictions, model['truth_classes'])
+    predictions = nn_predict(model, model['data'])
+    decoded_predictions = one_decoded(predictions, model['classes'])
 
     # Save predictions to file
     print(f"Saving result to file {ft_mlp.BLUE}{OUTFILE}{ft_mlp.RESET}"

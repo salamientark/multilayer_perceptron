@@ -3,6 +3,9 @@ import numpy as np
 import ft_mlp as ft_mlp
 import matplotlib.pyplot as plt
 from math import ceil
+# Imported directly: `ft_mlp.predict` resolves to the ft_mlp.predict module
+# rather than the re-exported function whenever that module is imported.
+from ft_mlp.network_layers import predict as nn_predict
 
 
 # DEFAULT VALUES
@@ -19,11 +22,14 @@ FEATURES = [
         'symmetry_worst', 'fractal_dimension_worst'
         ]
 TARGET = 'diagnosis'
-
-
-def print_weights(model: dict):
-    for i, layer in enumerate(model['layers']):
-        print(f"Layer {i + 1} weights:{layer['weights']}")
+DEFAULT_SHAPE = [24, 24]
+DEFAULT_EPOCH = 84
+DEFAULT_ALPHA = 0.1
+DEFAULT_BATCH = 32
+DEFAULT_SEED = 42
+DEFAULT_TRAIN_RATIO = 0.8
+DEFAULT_WEIGHTS_FILE = 'weights.npz'
+DEFAULT_MODEL_FILE = 'trained_model.json'
 
 
 def parse_args():
@@ -36,43 +42,48 @@ def parse_args():
                                       ".-.. -.. -.-.--")
 
     # Create exclusion group for shape and layer
-    shape_group = parser.add_mutually_exclusive_group(required=True)
+    shape_group = parser.add_mutually_exclusive_group()
     # Add parser argument
     shape_group.add_argument("--shape", type=int, nargs='+',
                              help="Define the number of neurons for each "
-                                  "hidden layer.")
+                                  f"hidden layer. (default: {DEFAULT_SHAPE})")
     shape_group.add_argument("--layer", type=int,
                              help="Define the number of hidden layers (use "
                                   "with --neurons).")
     shape_group.add_argument("--conf", type=str,
                              help="Model configuration file.")
     parser.add_argument("--features", choices=FEATURES, nargs='*',
-                        # default=FEATURES,
                         help="List of features to use.")
     parser.add_argument("--neurons", type=int, required=False,
                         help="Define a constant number of neurons for all "
                              "hidden layers (use with --layer).")
     parser.add_argument("--loss", choices=['categoricalCrossentropy'],
-                        # default="categoricalCrossentropy",
-                        help="Loss function to use")
+                        help="Loss function to use "
+                             "(default: categoricalCrossentropy)")
     parser.add_argument("--epoch", "-e", type=int,
-                        # default=84,
-                        help="Number of iteration of the trainig.")
+                        help="Number of iteration of the trainig. "
+                             f"(default: {DEFAULT_EPOCH})")
     parser.add_argument("--learning_rate", "-a", type=float, dest="alpha",
-                        # default=0.1,
-                        help="Learning rate of the algorithm.")
+                        help="Learning rate of the algorithm. "
+                             f"(default: {DEFAULT_ALPHA})")
     parser.add_argument("--batch", "-b", type=int, required=False,
-                        # default=8,
                         help="Batch size if mini-batch gradient descent is "
-                             "used.")
+                             f"used. (default: {DEFAULT_BATCH})")
     parser.add_argument("--seed", "-s", type=int,
-                        help="Seed to make model reproducible")
+                        help="Seed to make model reproducible "
+                             f"(default: {DEFAULT_SEED})")
     parser.add_argument("--train_ratio", "-tr", type=float,
-                        default=0.8,
+                        default=DEFAULT_TRAIN_RATIO,
                         help="The part of the dataset used as the training "
                              "set. (validation set ratio = 1 - train_ratio)")
     parser.add_argument("--outfile", "-of", type=str,
-                        default="weights.csv", help="Weight result file.")
+                        default=DEFAULT_WEIGHTS_FILE,
+                        help="Weight result file (npz). "
+                             f"(default: {DEFAULT_WEIGHTS_FILE})")
+    parser.add_argument("--model_outfile", "-mo", type=str,
+                        default=DEFAULT_MODEL_FILE,
+                        help="Model topology result file (json). "
+                             f"(default: {DEFAULT_MODEL_FILE})")
     parser.add_argument("dataset", type=str,
                         help="Training dataset.")
     # Get args
@@ -86,20 +97,25 @@ def validate_args(args):
     Parameters:
       args: program parameters
     """
-    if args.conf is None and args.seed is None:
-        raise Exception("Enter value for --seed/-s.")
-    if args.conf is None and args.epoch is None:
-        raise Exception("Enter value for --epoch/-e.")
-    if args.conf is None and args.train_ratio is None:
-        raise Exception("Enter value for --train_ratio/-tr.")
-    if args.conf is None and args.alpha is None:
-        raise Exception("Enter value for --learning_rate/-a.")
+    # Defaults are applied here rather than in argparse: a non-None value
+    # would override the --conf file in fill_model_from_param().
+    if args.conf is None:
+        if args.seed is None:
+            args.seed = DEFAULT_SEED
+        if args.epoch is None:
+            args.epoch = DEFAULT_EPOCH
+        if args.train_ratio is None:
+            args.train_ratio = DEFAULT_TRAIN_RATIO
+        if args.alpha is None:
+            args.alpha = DEFAULT_ALPHA
+        if args.batch is None:
+            args.batch = DEFAULT_BATCH
     if (args.layer is None) != (args.neurons is None):
         raise Exception("--layer and --neurons MUST be used together")
-    if args.shape is None and args.layer is None and args.conf is None:
-        raise Exception("Either --shape or --layer and --neurons must be used")
     if args.shape is None and args.layer is not None:
         args.shape = [args.neurons] * args.layer
+    if args.shape is None and args.conf is None:
+        args.shape = list(DEFAULT_SHAPE)
     if args.shape is not None and any(n <= 0 for n in args.shape):
         raise Exception("All layer must have at least one neuron.")
     if args.epoch is not None and args.epoch <= 0:
@@ -145,6 +161,10 @@ def check_model(model: dict):
         raise Exception("Input layer must have at least one feature.")
     if model['output']['shape'] is None or model['output']['shape'] <= 0:
         raise Exception("Output layer must have a positive number of neurons.")
+    if model['classes'] is None or len(model['classes']) < 2:
+        raise Exception("The target column must contain at least two classes.")
+    if len(model['classes']) != model['output']['shape']:
+        raise Exception("Output layer shape must match the number of classes.")
     if (model['output']['activation'] is None or model['output']['activation']
             is not ft_mlp.softmax):
         raise Exception("Output layer activation must be softmax.")
@@ -178,27 +198,27 @@ def init_model(model: dict) -> dict:
       dict: Model with initialized weights and bias
     """
     seed = model['seed']
-    data_inputs = len(model['input']['train_data'])
+    # Each layer gets its own seed: the same seed for every layer would give
+    # identically initialized layers whenever two layers have the same shape.
     for i, layer in enumerate(model['layers']):
         layer['gradients'] = {}
-        if i == 0:
-            layer['weights'], layer['bias'] = layer['weights_initializer'](
-                    model['input']['shape'], layer['shape'], seed, data_inputs)
-            continue
+        fan_in = (model['input']['shape'] if i == 0
+                  else model['layers'][i - 1]['shape'])
         layer['weights'], layer['bias'] = layer['weights_initializer'](
-                model['layers'][i - 1]['shape'], layer['shape'], seed,
-                data_inputs)
+                fan_in, layer['shape'], seed + i)
     model['output']['weights'], model['output']['bias'] = \
         model['output']['weights_initializer'](
                 model['layers'][-1]['shape'], model['output']['shape'],
-                seed, data_inputs
+                seed + len(model['layers'])
             )
     model['train_truth'] = ft_mlp.one_encode(model['data_train'],
-                                             TARGET)
+                                             TARGET, model['classes'])
     model['test_truth'] = ft_mlp.one_encode(model['data_test'],
-                                            TARGET)
-    model['train_loss'] = np.zeros((model['epoch'], len(model['data_train'])))
-    model['test_loss'] = np.zeros((model['epoch'], len(model['data_test'])))
+                                            TARGET, model['classes'])
+    # One mean loss/accuracy value per epoch, for both sets, so that the
+    # training and validation curves are directly comparable.
+    model['train_loss'] = np.zeros(model['epoch'])
+    model['test_loss'] = np.zeros(model['epoch'])
     model['train_acc'] = np.zeros(model['epoch'])
     model['test_acc'] = np.zeros(model['epoch'])
     return model
@@ -253,7 +273,10 @@ def backpropagation(
     """
     gradients = []
     predictions = results[-1]
-    gradient = predictions - truth  # Partial derivative (Crossentropy/softmax)
+    # Partial derivative (Crossentropy/softmax), averaged over the batch so
+    # that the effective learning rate does not scale with the batch size.
+    # Every downstream gradient inherits this 1/m factor.
+    gradient = (predictions - truth) / len(truth)
     gradient_weights = results[-2].T @ gradient
     gradient_bias = np.sum(gradient, axis=0)
     gradients.append((gradient_weights, gradient_bias))
@@ -271,26 +294,6 @@ def backpropagation(
         weights = model['layers'][i]['weights']
 
     return gradients
-
-
-def get_model_weights(model: dict) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Get model weights as list of (weights, bias) tuple for each layer
-
-    Used to save old weights for early stopping.
-
-    Parameters:
-      model (dict): Model parameters to get weights from
-
-    Returns:
-      list[tuple[np.ndarray]]: List of (weights, bias) tuple for each layer
-    """
-    weights = []
-    for layer in model['layers']:
-        weights.append((np.copy(layer['weights']),
-                        np.copy(layer['bias'])))
-    weights.append((np.copy(model['output']['weights']),
-                    np.copy(model['output']['bias'])))
-    return weights
 
 
 def update_weights(
@@ -321,10 +324,8 @@ def print_training_state(epoch: int, model: dict):
     """
     epoch_len = len(str(model['epoch']))
     total_epoch = model['epoch']
-    train_loss = model['train_loss']
-    test_loss = model['test_loss']
-    train_loss_mean = np.sum(train_loss[epoch]) / train_loss.shape[0]
-    test_loss_mean = np.sum(test_loss[epoch]) / test_loss.shape[0]
+    train_loss_mean = model['train_loss'][epoch]
+    test_loss_mean = model['test_loss'][epoch]
     print(f"Epoch {epoch + 1:0{epoch_len}d}/{total_epoch:0{epoch_len}d} - "
           f"loss: {train_loss_mean:.6f} - "
           f"val_loss: {test_loss_mean:.6f}")
@@ -344,8 +345,10 @@ def train(model: dict):
     for i in range(model['epoch']):
         # Batch handling
         batch_size = model['batch']
+        # Seed per epoch: a different shuffle each epoch, but the same
+        # sequence of shuffles across runs with the same --seed.
         batch_indexes = ft_mlp.get_random_batch_indexes(
-                model['data_train'].shape[0])
+                model['data_train'].shape[0], seed=model['seed'] + i)
         batch = batch_indexes[:batch_size]
         total_batch = ceil(len(model['input']['train_data']) / batch_size)
         last_index = batch_size
@@ -378,9 +381,9 @@ def train(model: dict):
         model['train_acc'][i] = epoch_train_acc / total_batch
 
         # Validation
-        test_predictions = ft_mlp.predict(model, model['data_test'][features])
+        test_predictions = nn_predict(model, model['data_test'][features])
         test_truth = model['test_truth']
-        model['test_loss'][i] = ft_mlp.calculate_loss(
+        model['test_loss'][i] = ft_mlp.calculate_loss_mean(
                 test_predictions,
                 test_truth,
                 loss)
@@ -397,10 +400,8 @@ def plot_loss_and_accuracy_curves(model: dict):
     Parameters:
       model (dict): Model parameters to use for plotting
     """
-    train_loss = np.sum(model['train_loss'], axis=1) \
-        / len(model['data_train'])
-    test_loss = np.sum(model['test_loss'], axis=1) \
-        / len(model['data_test'])
+    train_loss = model['train_loss']
+    test_loss = model['test_loss']
     train_acc = model['train_acc']
     test_acc = model['test_acc']
 
@@ -445,8 +446,8 @@ def main(args: ap.Namespace):
     check_model(model)  # Validate model inputs
     init_model(model)  # Init model weights and bias
     train(model)
-    ft_mlp.save_weights("weights.npz", model)
-    ft_mlp.save_model("trained_model.json", model)
+    ft_mlp.save_weights(args.outfile, model)
+    ft_mlp.save_model(args.model_outfile, model)
 
     plot_loss_and_accuracy_curves(model)
     return

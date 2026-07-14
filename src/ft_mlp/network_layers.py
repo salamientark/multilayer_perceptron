@@ -31,8 +31,17 @@ def sigmoid(values: np.ndarray | float) -> np.ndarray | float:
     Returns:
       np.ndarray | float: Sigmoid value
     """
-    return np.where(values >= 0, 1 / (1 + np.exp(-values)),  # avoid overflow
-                    np.exp(values) / (1 + np.exp(values)))
+    # Each branch is evaluated only where it applies. np.where would compute
+    # both for every element and overflow on the discarded one, which is
+    # harmless for the result but emits RuntimeWarnings on every pass.
+    z = np.asarray(values, dtype=float)
+    result = np.empty_like(z)
+    positive = z >= 0
+    negative = ~positive
+    result[positive] = 1 / (1 + np.exp(-z[positive]))
+    exp_z = np.exp(z[negative])
+    result[negative] = exp_z / (1 + exp_z)
+    return result if isinstance(values, np.ndarray) else float(result)
 
 
 def sigmoid_derivative(sig_result: np.ndarray | float) -> np.ndarray | float:

@@ -25,7 +25,9 @@ import unittest
 import sys
 import io
 import argparse
-from ft_mlp.train import parse_args, validate_args
+from ft_mlp.train import (parse_args, validate_args, DEFAULT_SHAPE,
+                          DEFAULT_EPOCH, DEFAULT_ALPHA, DEFAULT_BATCH,
+                          DEFAULT_SEED)
 
 class TestArgParser(unittest.TestCase):
     """Test class for argument parsing functionality"""
@@ -131,44 +133,31 @@ class TestArgParser(unittest.TestCase):
         error_message = captured_stderr.getvalue()
         self.assertIn("error: the following arguments are required: dataset", error_message)
 
-    def test_parse_args_missing_shape_raises_exception(self):
-        """Test that parse_args raises exception when shape/neurons is missing"""
-        
-        # Mock sys.argv to simulate command line arguments
-        # Only provide arguments that will cause the error
+    def test_parse_args_without_shape_uses_default_topology(self):
+        """Test that omitting --shape/--layer/--conf yields the default shape
+
+        The subject requires at least two hidden layers by default, so the
+        program must run with no arguments beyond the dataset.
+        """
         sys.argv = [
             'train.py',
-            '--dataset', 'data_training.csv',
-            '--epoch', '100',
-            '--alpha', '0.01',
-            '--batch', '16',
-            '--train-ratio', '0.8'
+            'data_training.csv'
             # Intentionally omit --shape, --layer, and --conf
         ]
-        
-        # Capture stderr to check error message
-        captured_stderr = io.StringIO()
-        sys.stderr = captured_stderr
-        
-        with self.assertRaises(SystemExit) as context:
-            parse_args()
-        
-        sys.stderr = sys.__stderr__  # Restore stderr
-        
-        # Check exit code (argparse exits with 2 for argument errors)
-        self.assertEqual(context.exception.code, 2)
-        
-        # Check the error message
-        error_message = captured_stderr.getvalue()
-        self.assertIn("one of the arguments --shape --layer --conf is required", error_message)
 
-    # TEST validate_args MISSING ARGS
-    def test_validate_args_missing_seed_raises_exception(self):
-        """Test that validate_args raises exception when seed is missing"""
+        args = parse_args()
+        validate_args(args)
+
+        self.assertEqual(args.shape, DEFAULT_SHAPE)
+        self.assertGreaterEqual(len(args.shape), 2)
+
+    # TEST validate_args APPLIES DEFAULTS
+    def test_validate_args_missing_seed_uses_default(self):
+        """Test that validate_args fills in the default seed"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
-        args.seed = None  # Missing required parameter
+        args.seed = None  # Omitted parameter
         args.epoch = 100
         args.alpha = 0.01
         args.batch = 16
@@ -177,19 +166,18 @@ class TestArgParser(unittest.TestCase):
         args.shape = [10, 5]
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --seed/-s", str(context.exception))
 
-    def test_validate_args_missing_epoch_raises_exception(self):
-        """Test that validate_args raises exception when epoch is missing"""
+        validate_args(args)
+
+        self.assertEqual(args.seed, DEFAULT_SEED)
+
+    def test_validate_args_missing_epoch_uses_default(self):
+        """Test that validate_args fills in the default epoch"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
-        args.epoch = None  # Missing required parameter
+        args.epoch = None  # Omitted parameter
         args.alpha = 0.01
         args.batch = 16
         args.layer = None
@@ -197,31 +185,56 @@ class TestArgParser(unittest.TestCase):
         args.shape = [10, 5]
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --epoch/-e", str(context.exception))
 
-    def test_validate_args_missing_alpha_raises_exception(self):
-        """Test that validate_args raises exception when epoch is missing"""
+        validate_args(args)
+
+        self.assertEqual(args.epoch, DEFAULT_EPOCH)
+
+    def test_validate_args_missing_alpha_uses_default(self):
+        """Test that validate_args fills in the default learning rate"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
         args.epoch = 100
+        args.alpha = None  # Omitted parameter
+        args.batch = None  # Omitted parameter
+        args.layer = None
+        args.neurons = None
+        args.shape = [10, 5]
+        args.train_ratio = 0.8
+        args.dataset = "data_training.csv"
+
+        validate_args(args)
+
+        self.assertEqual(args.alpha, DEFAULT_ALPHA)
+        self.assertEqual(args.batch, DEFAULT_BATCH)
+
+    def test_validate_args_conf_does_not_get_defaults(self):
+        """Test that --conf leaves unset params as None
+
+        A default would silently override the values in the JSON config
+        file, since fill_model_from_param() overrides any non-None arg.
+        """
+        args = argparse.Namespace()
+        args.conf = "model_config.json"
+        args.seed = None
+        args.epoch = None
         args.alpha = None
-        args.batch = 16
+        args.batch = None
         args.layer = None
         args.neurons = None
-        args.shape = [10, 5]
+        args.shape = None
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --learning_rate/-a", str(context.exception))
+
+        validate_args(args)
+
+        self.assertIsNone(args.seed)
+        self.assertIsNone(args.epoch)
+        self.assertIsNone(args.alpha)
+        self.assertIsNone(args.batch)
+        self.assertIsNone(args.shape)
 
     # TEST validate_args INVALID ARGS
     def test_validate_args_seed_zero_raises_exception(self):

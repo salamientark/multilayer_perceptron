@@ -50,8 +50,10 @@ def parse_args():
                                epilog=">^-^<")
 
     # Add parser option
+    # The default is a list: argparse does not apply nargs to a default, so a
+    # "a,b" string default would be validated character by character.
     parser.add_argument("--outfile", "-o", type=str,
-                        default="data_training.csv,data_validation.csv",
+                        default=['data_training.csv', 'data_validation.csv'],
                         help="output dataset name", nargs='+')
     parser.add_argument("--seed", "-s", type=int, default=1,
                         help="Random seed for shufling.")
@@ -108,7 +110,9 @@ def main(args):
     """
     try:
         # Get Dataframe
-        df = pd.read_csv(args.dataset_path)
+        # header=None: the dataset is headerless, without it pandas would
+        # consume the first sample as the header row and drop it.
+        df = pd.read_csv(args.dataset_path, header=None)
         df.columns = data_columns_names
 
         # Splitting

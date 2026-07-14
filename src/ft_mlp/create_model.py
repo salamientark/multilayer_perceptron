@@ -3,7 +3,8 @@ import pandas as pd
 from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
 from .initializer import he_initialisation
-from .preprocessing import split_dataset, standardize_df
+from .preprocessing import (split_dataset, standardize_df, get_class_list,
+                            get_standardization_stats)
 
 
 FUNCTION_MAP = {
@@ -39,6 +40,8 @@ def init_model_template() -> dict:
             'optimizer': None,
             'features': None,
             'target': None,
+            'classes': None,      # Class order of the output layer columns
+            'standardization': None,  # Per-feature mean/std fitted on train
             'input': {
                 'shape': None,
                 },        # Input layer configuration
@@ -50,33 +53,6 @@ def init_model_template() -> dict:
                 }          # Output layer configuration
             }
     return model
-
-
-def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
-    """Create a model layer for the multilayer perceptron
-
-    Parameters:
-      shape (int): Number of neurons in the layer
-      activation (function, optional): Activation function for the layer.
-                                 Defaults to sigmoid if None.
-      weight_init (function, optional): Weight initialization function.
-                                    Defaults to zero initialization if None.
-
-    Returns:
-      dict: Dictionary reenting the layer with keys for shape,
-            activation function, and weight initialization function
-    """
-    layer = {
-            'shape': shape,
-            'activation': (activation if activation is not None
-                           else sigmoid),
-            'weight_initializer': (weight_init if weight_init is not None
-                                   else he_initialisation),
-            'derivative': (DERIVATIVE_MAP[activation] if activation
-                           is not None and activation in DERIVATIVE_MAP
-                           else sigmoid_derivative)
-            }
-    return layer
 
 
 def fill_model_from_json(model: dict, config_file) -> dict:
@@ -91,7 +67,7 @@ def fill_model_from_json(model: dict, config_file) -> dict:
     """
     conf = json.load(config_file)
     simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs',
-                   'features', 'target']
+                   'features', 'target', 'classes', 'standardization']
     input_keys = model['input'].keys()
     layer_keys = model['output'].keys()
     function_keys = ['activation', 'weights_initializer', 'loss']
@@ -192,13 +168,24 @@ def fill_model_datasets(
         features = [col for col in df.columns
                     if col != target and col != 'id']
     filtered_df = pd.DataFrame(df[features + [target]])
-    standardized_data = standardize_df(filtered_df)
-    model['data_train'], model['data_test'] = split_dataset(
-            standardized_data, ratio=training_rate, seed=seed)
+    # Split before standardizing, and fit the statistics on the training set
+    # only: standardizing the whole dataframe first would leak the validation
+    # set's mean/std into training.
+    train_df, test_df = split_dataset(filtered_df, ratio=training_rate,
+                                      seed=seed)
+    model['standardization'] = get_standardization_stats(train_df, features)
+    model['data_train'] = standardize_df(train_df, features,
+                                         model['standardization'])
+    model['data_test'] = standardize_df(test_df, features,
+                                        model['standardization'])
     model['input']['train_data'] = model['data_train'][features].to_numpy()
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
-    model['output']['shape'] = filtered_df[target].nunique()
+    # Derived from the whole dataframe, before the split, so the order does
+    # not depend on which rows land in the training set. Saved with the model
+    # and reused at prediction time.
+    model['classes'] = get_class_list(filtered_df, target)
+    model['output']['shape'] = len(model['classes'])
     model['features'] = features
     model['input']['shape'] = len(features)
     model['target'] = target

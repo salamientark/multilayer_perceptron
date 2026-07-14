@@ -9,7 +9,8 @@
 - [x] Rework the train.py inputs to fit new model signature
 - [x] Rework model template for better readability (losses and accuracy)
 - [x] Pure feedoforward function ? would allow for batching
-- [x] Add ability to change optimizer function (Verify and update)
+- [x] Add ability to change optimizer function (gradient descent mode is
+      derived from --batch; there is no --optimizer flag)
   - [x] Batch gradient descent (batch = data size)
   - [x] Mini-batch gradient descent (1 < batch < data_size)
   - [x] Stochastic gradient descent (batch = 1)

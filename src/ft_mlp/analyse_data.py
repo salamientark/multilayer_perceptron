@@ -1,4 +1,4 @@
-import sys
+import argparse as ap
 import pandas as pd
 import ft_mlp as ft_mlp
 import matplotlib as mlp
@@ -107,18 +107,26 @@ def heatmap(df: pd.DataFrame):
     plt.show()
 
 
-def main(ac: int, av: list):
+def parse_args():
+    """Parse program argument"""
+    parser = ap.ArgumentParser(
+            prog="analyse_data.py",
+            description="Show statistics and plots for a dataset.",
+            epilog=">^-^<")
+    parser.add_argument("dataset", type=str,
+                        help="Path to the input csv file.")
+    return parser.parse_args()
+
+
+def main(args: ap.Namespace):
     """Give basic detailles on data
 
     Parameters:
-      ac (int) : Number of parameters
-      av (list) : List of parameters
+      args (argparse.Namespace) : Parsed program arguments
     """
     try:
-        if ac != 2:
-            raise Exception("Usage: python analyzer.py <dataset.csv>")
         # Read csv file
-        df = pd.read_csv(av[1], header=None)
+        df = pd.read_csv(args.dataset, header=None)
         df.columns = data_columns_names
 
         # Extract data and target
@@ -150,7 +158,7 @@ def main(ac: int, av: list):
 
 def cli():
     """Entry point for the command line."""
-    main(len(sys.argv), sys.argv)
+    main(parse_args())
 
 
 if __name__ == "__main__":

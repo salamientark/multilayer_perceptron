@@ -110,6 +110,13 @@ def main():
     test_modules = [
         ('tests.test_arg_parser', 'Argument Parser'),
         ('tests.test_create_model', 'Model Creation'),
+        ('tests.test_math_core', 'Math Core'),
+        ('tests.test_ft_math', 'Math Helpers'),
+        ('tests.test_preprocessing', 'Preprocessing'),
+        ('tests.test_model_utils', 'Model Utils'),
+        ('tests.test_analysis', 'Data Analysis'),
+        ('tests.test_programs', 'Programs (E2E)'),
+        ('tests.test_regressions', 'Regressions'),
     ]
     
     total_tests = 0

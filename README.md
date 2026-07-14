@@ -89,7 +89,6 @@ uv run -m ft_mlp.predict --model trained_model.json --weights weights.npz --data
 │   ├── train.py           # Train the network (backpropagation)
 │   ├── predict.py         # Predict with a trained model
 │   ├── network_layers.py  # Layers, activations, forward pass
-│   ├── optimizers.py      # Batch / stochastic / mini-batch descent
 │   ├── loss_functions.py  # Cross-entropy losses
 │   ├── preprocessing.py   # Standardization, encoding, splitting
 │   ├── create_model.py    # Model construction from args/JSON
@@ -111,14 +110,16 @@ Splits the dataset into training and validation sets.
 
 **Usage:**
 ```bash
-uv run -m ft_mlp.split_dataset [OPTIONS] <dataset.csv>
+uv run -m ft_mlp.split_dataset <dataset.csv> [OPTIONS]
 ```
 
 **Arguments:**
 - `dataset_path` (required): Path to the input CSV file
+  - Pass it *before* `--outfile`: `--outfile` accepts several values, so it
+    swallows the dataset path if it comes first.
 
 **Options:**
-- `--outfile`, `-o`: Output filenames (default: "data_training.csv,data_validation.csv")
+- `--outfile`, `-o`: Output filenames (default: data_training.csv data_validation.csv)
   - Can be comma-separated string or two separate arguments
 - `--seed`, `-s`: Random seed for shuffling (default: 1)
 - `--train-ratio`, `-r`: Ratio of training set size (default: 0.8, range: 0.0-1.0)
@@ -171,7 +172,8 @@ uv run -m ft_mlp.train [OPTIONS] <dataset>
   - If 1 < batch < dataset_size: mini-batch gradient descent
   - If batch >= dataset_size: batch gradient descent
 - `--train_ratio`, `-tr`: Training/validation split ratio (default: 0.8)
-- `--outfile`, `-of`: Output filename for weights (default: "weights.csv")
+- `--outfile`, `-of`: Output filename for weights (default: "weights.npz")
+- `--model_outfile`, `-mo`: Output filename for the model topology (default: "trained_model.json")
 
 **Examples:**
 ```bash
