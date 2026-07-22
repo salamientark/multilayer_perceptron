@@ -173,19 +173,22 @@ uv run -m ft_mlp.train [OPTIONS] <dataset>
 **Required Arguments (mutually exclusive):**
 - `--shape`: List of integers defining neurons per hidden layer
   - Example: `--shape 24 16` creates 2 hidden layers with 24 and 16 neurons
-- `--layer` + `--neurons`: Define uniform hidden layers
-  - Example: `--layer 3 --neurons 20` creates 3 hidden layers with 20 neurons each
+- `--layer`: Accepts either form
+  - A list of widths: `--layer 24 24 24` creates 3 hidden layers of 24 neurons
+    (this is the syntax used in the subject; equivalent to `--shape 24 24 24`)
+  - A single count, combined with `--neurons`: `--layer 3 --neurons 20` creates
+    3 hidden layers with 20 neurons each
 - `--conf`: Path to model configuration JSON file
 
 **Required Options:**
-- `--epoch`, `-e`: Number of training iterations (must be > 0)
+- `--epoch`, `--epochs`, `-e`: Number of training iterations (must be > 0)
 - `--learning_rate`, `-a`: Learning rate (range: 0.0-1.0)
 - `--seed`, `-s`: Random seed for reproducibility (must be positive integer)
 
 **Optional Arguments:**
 - `--features`: Subset of features to use (default: all 30 features)
 - `--loss`: Loss function (choices: 'categoricalCrossentropy', default: 'categoricalCrossentropy')
-- `--batch`, `-b`: Batch size for mini-batch gradient descent (default: full batch)
+- `--batch`, `--batch_size`, `-b`: Batch size for mini-batch gradient descent (default: full batch)
   - If batch=1: stochastic gradient descent
   - If 1 < batch < dataset_size: mini-batch gradient descent
   - If batch >= dataset_size: batch gradient descent
@@ -205,7 +208,17 @@ uv run -m ft_mlp.train --shape 24 16 --epoch 100 -a 0.1 -s 42 --batch 32 data_tr
 
 # Training with uniform hidden layers
 uv run -m ft_mlp.train --layer 3 --neurons 20 --epoch 100 -a 0.1 -s 42 data_training.csv
+
+# The subject's example CLI (IV.3), accepted verbatim
+uv run -m ft_mlp.train data_training.csv --layer 24 24 24 --epochs 84 \
+    --loss categoricalCrossentropy --batch_size 8 --learning_rate 0.0314
 ```
+
+> **Argument order:** `--shape` and `--layer` take a variable number of values,
+> so put the dataset *before* them (or separate them from it with another
+> option). `--layer 24 24 24 data_training.csv` makes argparse try to read the
+> filename as a layer width and it exits with
+> `argument --layer: invalid int value: 'data_training.csv'`.
 
 ### 4. `src/ft_mlp/predict.py`
 

@@ -24,6 +24,7 @@ proper handling of command-line arguments and validation logic.
 import unittest
 import sys
 import io
+import contextlib
 import argparse
 from ft_mlp.train import (parse_args, validate_args, DEFAULT_SHAPE,
                           DEFAULT_EPOCH, DEFAULT_ALPHA, DEFAULT_BATCH,
@@ -85,7 +86,8 @@ class TestArgParser(unittest.TestCase):
 
         args = parse_args()
 
-        self.assertEqual(args.layer, 3)
+        # --layer is nargs='+', so a lone count still arrives as a list
+        self.assertEqual(args.layer, [3])
         self.assertEqual(args.neurons, 8)
         self.assertEqual(args.dataset, 'data_training.csv')
         self.assertEqual(args.seed, 44)
@@ -464,6 +466,70 @@ class TestArgParser(unittest.TestCase):
 
         self.assertIn("All layer must have at least one neuron.",
                       str(context.exception))
+
+
+class TestSubjectExampleCli(unittest.TestCase):
+    """The CLI printed in the subject (IV.3) must run verbatim.
+
+    An evaluator copy-pastes it, so `--layer 24 24 24`, `--epochs` and
+    `--batch_size` have to be accepted alongside the project's own
+    `--shape` / `--epoch` / `--batch` spellings.
+    """
+
+    def setUp(self):
+        self.original_argv = sys.argv
+
+    def tearDown(self):
+        sys.argv = self.original_argv
+
+    def _parse(self, *flags):
+        sys.argv = ['train.py', 'data_training.csv', *flags]
+        args = parse_args()
+        validate_args(args)
+        return args
+
+    def test_subject_example_is_accepted_verbatim(self):
+        args = self._parse('--layer', '24', '24', '24', '--epochs', '84',
+                           '--loss', 'categoricalCrossentropy',
+                           '--batch_size', '8', '--learning_rate', '0.0314')
+        self.assertEqual(args.shape, [24, 24, 24])
+        self.assertEqual(args.epoch, 84)
+        self.assertEqual(args.batch, 8)
+        self.assertAlmostEqual(args.alpha, 0.0314)
+
+    def test_epochs_and_epoch_are_the_same_option(self):
+        self.assertEqual(self._parse('--epochs', '7').epoch,
+                         self._parse('--epoch', '7').epoch)
+
+    def test_batch_size_and_batch_are_the_same_option(self):
+        self.assertEqual(self._parse('--batch_size', '7').batch,
+                         self._parse('--batch', '7').batch)
+
+    def test_single_layer_value_still_needs_neurons(self):
+        """The original `--layer <count> --neurons <width>` form is kept."""
+        self.assertEqual(self._parse('--layer', '3', '--neurons', '8').shape,
+                         [8, 8, 8])
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '3')
+        self.assertIn('MUST be used together', str(ctx.exception))
+
+    def test_layer_list_rejects_neurons(self):
+        """A width list plus --neurons is contradictory, not silently won."""
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '24', '24', '--neurons', '8')
+        self.assertIn('single --layer count', str(ctx.exception))
+
+    def test_zero_layers_is_rejected(self):
+        """`--layer 0 --neurons 8` used to yield a network with no hidden
+        layer instead of an error."""
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '0', '--neurons', '8')
+        self.assertIn('at least one hidden layer', str(ctx.exception))
+
+    def test_layer_and_shape_remain_mutually_exclusive(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                self._parse('--shape', '4', '4', '--layer', '24', '24')
 
 
 if __name__ == '__main__':

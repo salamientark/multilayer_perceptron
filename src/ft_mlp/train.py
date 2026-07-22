@@ -48,9 +48,11 @@ def parse_args():
     shape_group.add_argument("--shape", type=int, nargs='+',
                              help="Define the number of neurons for each "
                                   f"hidden layer. (default: {DEFAULT_SHAPE})")
-    shape_group.add_argument("--layer", type=int,
-                             help="Define the number of hidden layers (use "
-                                  "with --neurons).")
+    shape_group.add_argument("--layer", type=int, nargs='+',
+                             help="Either the number of neurons of each "
+                                  "hidden layer (--layer 24 24 24), or the "
+                                  "number of hidden layers when a single "
+                                  "value is given (--layer 3 --neurons 24).")
     shape_group.add_argument("--conf", type=str,
                              help="Model configuration file.")
     parser.add_argument("--features", choices=FEATURES, nargs='*',
@@ -61,13 +63,14 @@ def parse_args():
     parser.add_argument("--loss", choices=['categoricalCrossentropy'],
                         help="Loss function to use "
                              "(default: categoricalCrossentropy)")
-    parser.add_argument("--epoch", "-e", type=int,
+    parser.add_argument("--epoch", "--epochs", "-e", type=int,
                         help="Number of iteration of the trainig. "
                              f"(default: {DEFAULT_EPOCH})")
     parser.add_argument("--learning_rate", "-a", type=float, dest="alpha",
                         help="Learning rate of the algorithm. "
                              f"(default: {DEFAULT_ALPHA})")
-    parser.add_argument("--batch", "-b", type=int, required=False,
+    parser.add_argument("--batch", "--batch_size", "-b", type=int,
+                        required=False,
                         help="Batch size if mini-batch gradient descent is "
                              f"used. (default: {DEFAULT_BATCH})")
     parser.add_argument("--seed", "-s", type=int,
@@ -115,12 +118,25 @@ def validate_args(args):
             args.alpha = DEFAULT_ALPHA
         if args.batch is None:
             args.batch = DEFAULT_BATCH
-    if (args.layer is None) != (args.neurons is None):
-        raise Exception("--layer and --neurons MUST be used together")
-    if args.shape is None and args.layer is not None:
-        args.shape = [args.neurons] * args.layer
+    # --layer takes two forms. Several values list the width of each hidden
+    # layer (`--layer 24 24 24`, the syntax used by the subject); a single
+    # value is a layer count and needs --neurons to give the width
+    # (`--layer 3 --neurons 24`). Both end up in args.shape.
+    if args.layer is not None and len(args.layer) > 1:
+        if args.neurons is not None:
+            raise Exception("--neurons MUST be used with a single --layer "
+                            "count, not with a list of layer sizes")
+        args.shape = list(args.layer)
+    else:
+        layer_count = args.layer[0] if args.layer is not None else None
+        if (layer_count is None) != (args.neurons is None):
+            raise Exception("--layer and --neurons MUST be used together")
+        if args.shape is None and layer_count is not None:
+            args.shape = [args.neurons] * layer_count
     if args.shape is None and args.conf is None:
         args.shape = list(DEFAULT_SHAPE)
+    if args.shape is not None and len(args.shape) == 0:
+        raise Exception("The network must have at least one hidden layer.")
     if args.shape is not None and any(n <= 0 for n in args.shape):
         raise Exception("All layer must have at least one neuron.")
     if args.epoch is not None and args.epoch <= 0:
