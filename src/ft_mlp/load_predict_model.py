@@ -1,6 +1,7 @@
 import pandas as pd
 from .create_model import load_model_from_json
-from .preprocessing import standardize_df, get_class_list, one_encode
+from .dataset_io import read_dataset
+from .preprocessing import standardize_df, one_encode
 from .model_utils import load_weights_from_file
 
 
@@ -25,7 +26,7 @@ def load_predict_model_weights(model: dict, weights):
 def load_predict_model_data(
         model: dict,
         dataset,
-        features: list = [],
+        features: list | None = None,
         target: str | None = None
         ) -> None:
     """Load dataset into model structure
@@ -41,24 +42,29 @@ def load_predict_model_data(
     Returns:
       dict : Model structure with loaded dataset
     """
-    df = pd.read_csv(dataset)
+    df = read_dataset(dataset)
     if not features:
         features = df.columns.tolist()
     filtered_df = pd.DataFrame(df[features])
-    standardized_data = standardize_df(filtered_df)
+    if not model['standardization']:
+        raise Exception("The model file does not contain the standardization "
+                        "statistics. Retrain the model to regenerate them.")
+    standardized_data = standardize_df(filtered_df, features,
+                                       model['standardization'])
     model['data'] = standardized_data.to_numpy()
     if target is not None:
-        target_classes = get_class_list(df, target)
-        model['truth_classes'] = target_classes
+        if not model['classes']:
+            raise Exception("The model file does not contain the class list. "
+                            "Retrain the model to regenerate it.")
         model['raw_truth'] = df[target].to_list()
-        model['truth'] = one_encode(df, target)
+        model['truth'] = one_encode(df, target, model['classes'])
 
 
 def load_predict_model(
         model_filename: str,
         weights_filename: str,
         data_filename: str,
-        features: list = [],
+        features: list | None = None,
         target: str | None = None
         ) -> dict:
     """Load model, weights, and dataset for prediction

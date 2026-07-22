@@ -20,13 +20,12 @@ Unit tests for create)model modules in ft_mlp/
 # }
 
 import unittest
-import sys
-import io
 import argparse
-from ft_mlp.create_model import init_model_template, fill_model_from_json, fill_model_from_param, fill_model_datasets, create_model, load_model_from_json
+from ft_mlp.create_model import (init_model_template, fill_model_from_json,
+                                 create_model)
 from ft_mlp.network_layers import sigmoid, softmax
 from ft_mlp.initializer import he_initialisation
-from ft_mlp.loss_functions import categorical_cross_entropy, binary_cross_entropy
+
 
 class TestCreateModel(unittest.TestCase):
     """Unit tests for create_model module"""
@@ -58,6 +57,8 @@ class TestCreateModel(unittest.TestCase):
             'optimizer': None,
             'features': None,
             'target': None,
+            'classes': None,
+            'standardization': None,
             'input': {
                 'shape': None,
                 },
@@ -136,7 +137,8 @@ class TestCreateModel(unittest.TestCase):
     def test_invalid_fill_model_from_json_to_much_values(self):
         """Test filling model from invalid JSON config raises ValueError"""
         template = init_model_template()
-        config_file_path = "tests/test_data/invalid_model_config_to_much_key.json"
+        config_file_path = ("tests/test_data/"
+                            "invalid_model_config_to_much_key.json")
         with self.assertRaises(KeyError):
             with open(config_file_path, 'r') as config_file:
                 fill_model_from_json(template, config_file)
@@ -158,20 +160,20 @@ class TestCreateModel(unittest.TestCase):
         )
         target = 'diagnosis'
         result = create_model(args, target)
-        
-        # Test that features were auto-detected (all columns except target and id)
+
+        # Features auto-detected (all columns except target and id)
         expected_features = [
-            'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 
-            'smoothness_mean', 'compactness_mean', 'concavity_mean', 
+            'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean',
+            'smoothness_mean', 'compactness_mean', 'concavity_mean',
             'concave_points_mean', 'symmetry_mean', 'fractal_dimension_mean',
-            'radius_std', 'texture_std', 'perimeter_std', 'area_std', 
-            'smoothness_std', 'compactness_std', 'concavity_std', 
+            'radius_std', 'texture_std', 'perimeter_std', 'area_std',
+            'smoothness_std', 'compactness_std', 'concavity_std',
             'concave_points_std', 'symmetry_std', 'fractal_dimension_std',
-            'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst', 
-            'smoothness_worst', 'compactness_worst', 'concavity_worst', 
+            'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst',
+            'smoothness_worst', 'compactness_worst', 'concavity_worst',
             'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst'
         ]
-        
+
         self.assertEqual(result['features'], expected_features)
         self.assertEqual(result['input']['shape'], len(expected_features))
         self.assertIsNotNone(result['input']['train_data'])

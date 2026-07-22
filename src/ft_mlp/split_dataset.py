@@ -1,43 +1,13 @@
 import argparse as ap
-import pandas as pd
-from ft_mlp import split_dataset, RED, RESET, GREEN, BLUE
+import sys
+from ft_mlp import RED, RESET, GREEN, BLUE
+from ft_mlp.dataset_io import read_dataset
+from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
+from ft_mlp.preprocessing import split_dataset
 
 
-# Data columns name
-data_columns_names = [
-    "id",
-    "diagnosis",
-    "radius_mean",
-    "texture_mean",
-    "perimeter_mean",
-    "area_mean",
-    "smoothness_mean",
-    "compactness_mean",
-    "concavity_mean",
-    "concave_points_mean",
-    "symmetry_mean",
-    "fractal_dimension_mean",
-    "radius_std",
-    "texture_std",
-    "perimeter_std",
-    "area_std",
-    "smoothness_std",
-    "compactness_std",
-    "concavity_std",
-    "concave_points_std",
-    "symmetry_std",
-    "fractal_dimension_std",
-    "radius_worst",
-    "texture_worst",
-    "perimeter_worst",
-    "area_worst",
-    "smoothness_worst",
-    "compactness_worst",
-    "concavity_worst",
-    "concave_points_worst",
-    "symmetry_worst",
-    "fractal_dimension_worst"
-]
+# Data columns name (kept as a module attribute for callers/tests)
+data_columns_names = DATA_COLUMNS_NAMES
 
 
 def parse_args():
@@ -49,8 +19,10 @@ def parse_args():
                                epilog=">^-^<")
 
     # Add parser option
+    # The default is a list: argparse does not apply nargs to a default, so a
+    # "a,b" string default would be validated character by character.
     parser.add_argument("--outfile", "-o", type=str,
-                        default="data_training.csv,data_validation.csv",
+                        default=['data_training.csv', 'data_validation.csv'],
                         help="output dataset name", nargs='+')
     parser.add_argument("--seed", "-s", type=int, default=1,
                         help="Random seed for shufling.")
@@ -105,29 +77,36 @@ def main(args):
       --train-ratio <float>  Ratio of training dataset (default: 0.8)
       --outfiles <str,str> or <str> <str>   Output files
     """
+    # Get Dataframe. read_dataset accepts the raw headerless data.csv as
+    # well as an already-split file that carries a header, so re-splitting
+    # an output of this program works too.
+    df = read_dataset(args.dataset_path)
+
+    # Splitting
+    train_set, test_set = split_dataset(df, ratio=args.train_ratio,
+                                        seed=args.seed)
+
+    # Writing to file
+    print(f"Saving training set to : {BLUE}{args.outfile[0]}{RESET} ... ",
+          end="")
+    train_set.to_csv(args.outfile[0], index=False)
+    print(f"{GREEN}OK!{RESET}")
+
+    print(f"Saving test set to     : {BLUE}{args.outfile[1]}{RESET} ... ",
+          end="")
+    test_set.to_csv(args.outfile[1], index=False)
+    print(f"{GREEN}OK!{RESET}")
+
+
+def cli():
+    """Entry point for the command line."""
+    args = parse_args()
     try:
-        # Get Dataframe
-        df = pd.read_csv(args.dataset_path)
-        df.columns = data_columns_names
-
-        # Splitting
-        train_set, test_set = split_dataset(df, ratio=args.train_ratio,
-                                            seed=args.seed)
-
-        # Writing to file
-        print(f"Saving training set to : {BLUE}{args.outfile[0]}{RESET} ... ",
-              end="")
-        train_set.to_csv(args.outfile[0], index=False)
-        print(f"{GREEN}OK!{RESET}")
-
-        print(f"Saving test set to     : {BLUE}{args.outfile[1]}{RESET} ... ",
-              end="")
-        test_set.to_csv(args.outfile[1], index=False)
-        print(f"{GREEN}OK!{RESET}")
+        main(args)
     except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
+        print(f"{RED}Error{RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    main(args)
+    cli()

@@ -8,69 +8,152 @@ Goal of the project is described in multilayer_perceptron.pdf
 
 This project implements a multilayer perceptron (MLP) neural network from scratch using only numpy for linear algebra operations. The network is trained to classify breast tumors as malignant (M) or benign (B) based on 30 features describing cell nucleus characteristics.
 
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) — Python package & environment manager
+- Python **3.10+** (uv installs it automatically if missing)
+
+Python dependencies (installed by `uv sync`):
+
+| Package    | Purpose                          |
+|------------|----------------------------------|
+| numpy      | Linear algebra / matrix ops      |
+| pandas     | CSV loading / data handling      |
+| matplotlib | Learning curves and plots        |
+| seaborn    | Pairplots and correlation heatmap|
+| PyQt5      | Matplotlib interactive backend   |
+
 ## How to use
 
 ### Setup
 First you must create the python environment locally, install dependencies and activate this virtual environment for the current session.
 ```bash
-make
+uv sync
 source .venv/bin/activate
 ```
+
+`uv sync` creates the `.venv` virtual environment and installs all
+dependencies from `pyproject.toml` / `uv.lock`. It also installs the `ft_mlp`
+package itself in editable mode, so the programs are importable from anywhere.
+`make` is kept as an alias for `uv sync`.
+
+### Running the programs
+
+Each program can be run in three equivalent ways:
+
+```bash
+# 1. As a module (works from any directory)
+uv run -m ft_mlp.train --help
+
+# 2. As a script path
+uv run src/ft_mlp/train.py --help
+
+# 3. As plain python, with the venv activated
+python src/ft_mlp/train.py --help
+```
+
+Installed console scripts are also available: `ft-train`, `ft-predict`,
+`ft-split-dataset`, `ft-analyse-data`.
+
+The examples below use the `uv run -m` form. Substitute any of the above.
 
 ### Basic Workflow
 
 1. **Analyze the dataset** (optional):
 ```bash
-python analyse_data.py data.csv
+uv run -m ft_mlp.analyse_data data.csv
 ```
 
 2. **Split the dataset**:
 ```bash
-python split_dataset.py data.csv
+uv run -m ft_mlp.split_dataset data.csv
 ```
 
 3. **Train the model**:
 ```bash
-python train.py --shape 24 16 --epoch 100 --learning_rate 0.1 --seed 42 data_training.csv
+uv run -m ft_mlp.train --shape 24 16 --epoch 100 --learning_rate 0.1 --seed 42 data_training.csv
 ```
 
 4. **Make predictions**:
 ```bash
-python predict.py --model trained_model.json --weights weights.npz --data data_validation.csv
+uv run -m ft_mlp.predict --model trained_model.json --weights weights.npz --data data_validation.csv
+```
+
+#### How the data is split
+
+There are two levels of splitting, which is deliberate:
+
+- `split_dataset` holds out `data_validation.csv`. That file is **never seen
+  during training** — not by the weights, and not by the standardization
+  statistics. It is what `predict` is evaluated on.
+- `train` splits the file it is given once more (`--train_ratio`, default 0.8)
+  into an inner training set and an inner validation set. The inner validation
+  set is what produces the per-epoch `val_loss` and the learning curves, and it
+  is what any hyperparameter choice is based on.
+
+So of the 569 samples: 455 go to `train`, which uses 364 to fit the weights and
+91 to watch for overfitting, and the remaining 114 stay untouched for `predict`.
+Standardization statistics are fitted on the inner training set alone and stored
+in `trained_model.json`, so `predict` rescales new data with the training
+statistics rather than recomputing them from whatever file it is handed.
+
+## Project structure
+
+```
+.
+├── src/ft_mlp/
+│   ├── split_dataset.py   # Split data into train/validation sets
+│   ├── analyse_data.py    # Dataset statistics and plots
+│   ├── train.py           # Train the network (backpropagation)
+│   ├── predict.py         # Predict with a trained model
+│   ├── network_layers.py  # Layers, activations, forward pass
+│   ├── loss_functions.py  # Cross-entropy losses
+│   ├── preprocessing.py   # Standardization, encoding, splitting
+│   ├── create_model.py    # Model construction from args/JSON
+│   ├── model_utils.py     # Save/load weights, metrics
+│   ├── initializer.py     # Weight initialization
+│   ├── analysis.py        # Describe / correlation matrix
+│   └── ft_math.py         # From-scratch math primitives
+├── tests/                 # Unit tests
+├── scripts/run_tests.py   # Test runner (flake8 + unittest)
+├── pyproject.toml         # Project metadata & dependencies
+└── uv.lock                # Pinned dependency versions
 ```
 
 ## Programs Description
 
-### 1. split_dataset.py
+### 1. `src/ft_mlp/split_dataset.py`
 
 Splits the dataset into training and validation sets.
 
 **Usage:**
 ```bash
-python split_dataset.py [OPTIONS] <dataset.csv>
+uv run -m ft_mlp.split_dataset <dataset.csv> [OPTIONS]
 ```
 
 **Arguments:**
 - `dataset_path` (required): Path to the input CSV file
+  - Pass it *before* `--outfile`: `--outfile` accepts several values, so it
+    swallows the dataset path if it comes first.
 
 **Options:**
-- `--outfile`, `-o`: Output filenames (default: "data_training.csv,data_validation.csv")
+- `--outfile`, `-o`: Output filenames (default: data_training.csv data_validation.csv)
   - Can be comma-separated string or two separate arguments
 - `--seed`, `-s`: Random seed for shuffling (default: 1)
 - `--train-ratio`, `-r`: Ratio of training set size (default: 0.8, range: 0.0-1.0)
 
 **Example:**
 ```bash
-python split_dataset.py --seed 42 --train-ratio 0.8 data.csv
+uv run -m ft_mlp.split_dataset --seed 42 --train-ratio 0.8 data.csv
 ```
 
-### 2. analyse_data.py
+### 2. `src/ft_mlp/analyse_data.py`
 
 Analyzes and visualizes the dataset with statistics and correlation plots.
 
 **Usage:**
 ```bash
-python analyse_data.py <dataset.csv>
+uv run -m ft_mlp.analyse_data <dataset.csv>
 ```
 
 **Features:**
@@ -78,56 +161,75 @@ python analyse_data.py <dataset.csv>
 - Generates pairplots for mean, std, and worst features
 - Creates correlation heatmap showing feature relationships
 
-### 3. train.py
+### 3. `src/ft_mlp/train.py`
 
 Trains the multilayer perceptron model.
 
 **Usage:**
 ```bash
-python train.py [OPTIONS] <dataset>
+uv run -m ft_mlp.train [OPTIONS] <dataset>
 ```
 
-**Required Arguments (mutually exclusive):**
+The only mandatory argument is the positional `<dataset>`. Everything below is
+optional and falls back to the documented default.
+
+**Topology (mutually exclusive, default: `--shape 24 24`):**
 - `--shape`: List of integers defining neurons per hidden layer
   - Example: `--shape 24 16` creates 2 hidden layers with 24 and 16 neurons
-- `--layer` + `--neurons`: Define uniform hidden layers
-  - Example: `--layer 3 --neurons 20` creates 3 hidden layers with 20 neurons each
+- `--layer`: Accepts either form
+  - A list of widths: `--layer 24 24 24` creates 3 hidden layers of 24 neurons
+    (this is the syntax used in the subject; equivalent to `--shape 24 24 24`)
+  - A single count, combined with `--neurons`: `--layer 3 --neurons 20` creates
+    3 hidden layers with 20 neurons each
 - `--conf`: Path to model configuration JSON file
 
-**Required Options:**
-- `--epoch`, `-e`: Number of training iterations (must be > 0)
-- `--learning_rate`, `-a`: Learning rate (range: 0.0-1.0)
-- `--seed`, `-s`: Random seed for reproducibility (must be positive integer)
+**Hyperparameters:**
+- `--epoch`, `--epochs`, `-e`: Number of training iterations (must be > 0, default: 84)
+- `--learning_rate`, `-a`: Learning rate (range: 0.0-1.0, default: 0.1)
+- `--seed`, `-s`: Random seed for reproducibility (must be positive integer, default: 42)
 
 **Optional Arguments:**
 - `--features`: Subset of features to use (default: all 30 features)
 - `--loss`: Loss function (choices: 'categoricalCrossentropy', default: 'categoricalCrossentropy')
-- `--batch`, `-b`: Batch size for mini-batch gradient descent (default: full batch)
+- `--batch`, `--batch_size`, `-b`: Batch size for mini-batch gradient descent (default: 32)
   - If batch=1: stochastic gradient descent
   - If 1 < batch < dataset_size: mini-batch gradient descent
   - If batch >= dataset_size: batch gradient descent
 - `--train_ratio`, `-tr`: Training/validation split ratio (default: 0.8)
-- `--outfile`, `-of`: Output filename for weights (default: "weights.csv")
+- `--outfile`, `-of`: Output filename for weights (default: "weights.npz")
+- `--model_outfile`, `-mo`: Output filename for the model topology (default: "trained_model.json")
+- `--plot_outfile`, `-po`: Save the learning curves to an image file instead of
+  opening a window. Use this on a machine without a display.
 
 **Examples:**
 ```bash
 # Basic training with 2 hidden layers
-python train.py --shape 24 16 --epoch 100 --learning_rate 0.1 --seed 42 data_training.csv
+uv run -m ft_mlp.train --shape 24 16 --epoch 100 --learning_rate 0.1 --seed 42 data_training.csv
 
 # Training with mini-batch gradient descent
-python train.py --shape 24 16 --epoch 100 -a 0.1 -s 42 --batch 32 data_training.csv
+uv run -m ft_mlp.train --shape 24 16 --epoch 100 -a 0.1 -s 42 --batch 32 data_training.csv
 
 # Training with uniform hidden layers
-python train.py --layer 3 --neurons 20 --epoch 100 -a 0.1 -s 42 data_training.csv
+uv run -m ft_mlp.train --layer 3 --neurons 20 --epoch 100 -a 0.1 -s 42 data_training.csv
+
+# The subject's example CLI (IV.3), accepted verbatim
+uv run -m ft_mlp.train data_training.csv --layer 24 24 24 --epochs 84 \
+    --loss categoricalCrossentropy --batch_size 8 --learning_rate 0.0314
 ```
 
-### 4. predict.py
+> **Argument order:** `--shape` and `--layer` take a variable number of values,
+> so put the dataset *before* them (or separate them from it with another
+> option). `--layer 24 24 24 data_training.csv` makes argparse try to read the
+> filename as a layer width and it exits with
+> `argument --layer: invalid int value: 'data_training.csv'`.
+
+### 4. `src/ft_mlp/predict.py`
 
 Makes predictions using a trained model.
 
 **Usage:**
 ```bash
-python predict.py --model <model.json> --weights <weights.npz> --data <dataset.csv>
+uv run -m ft_mlp.predict --model <model.json> --weights <weights.npz> --data <dataset.csv>
 ```
 
 **Required Arguments:**
@@ -141,7 +243,7 @@ python predict.py --model <model.json> --weights <weights.npz> --data <dataset.c
 
 **Example:**
 ```bash
-python predict.py -m trained_model.json -w weights.npz -d data_validation.csv
+uv run -m ft_mlp.predict -m trained_model.json -w weights.npz -d data_validation.csv
 ```
 
 ## Core Functions Reference
@@ -160,7 +262,7 @@ Computes the output of a neural network layer.
 **Returns:**
 - `np.ndarray`: Activated output of shape (batch_size, neurons)
 
-**Location:** ft_mlp/network_layers.py:87
+**Location:** src/ft_mlp/network_layers.py:87
 
 ---
 
@@ -175,7 +277,7 @@ Applies sigmoid activation function element-wise.
 
 **Formula:** σ(x) = 1 / (1 + e^(-x))
 
-**Location:** ft_mlp/network_layers.py:25
+**Location:** src/ft_mlp/network_layers.py:25
 
 ---
 
@@ -190,7 +292,7 @@ Computes softmax activation for multi-class classification output layer.
 
 **Formula:** softmax(x_i) = e^(x_i - max(x)) / Σ(e^(x_j - max(x)))
 
-**Location:** ft_mlp/network_layers.py:54
+**Location:** src/ft_mlp/network_layers.py:54
 
 ---
 
@@ -206,7 +308,7 @@ Makes predictions using the trained model (forward pass only).
 
 **Note:** Use this for inference only, not during training.
 
-**Location:** ft_mlp/network_layers.py:108
+**Location:** src/ft_mlp/network_layers.py:108
 
 ---
 
@@ -222,7 +324,7 @@ Performs forward pass and stores all layer activations for backpropagation.
 **Returns:**
 - `list[np.ndarray]`: Activation outputs from each layer (including output layer)
 
-**Location:** train.py:207
+**Location:** src/ft_mlp/train.py:207
 
 ---
 
@@ -243,7 +345,7 @@ Computes gradients for all layers using backpropagation algorithm.
 2. Propagate gradient backwards through each layer
 3. Apply chain rule with activation derivatives
 
-**Location:** train.py:235
+**Location:** src/ft_mlp/train.py:235
 
 ---
 
@@ -258,7 +360,7 @@ Updates model weights using gradient descent.
 - w_new = w_old - α * ∂L/∂w
 - b_new = b_old - α * ∂L/∂b
 
-**Location:** train.py:296
+**Location:** src/ft_mlp/train.py:296
 
 ---
 
@@ -276,7 +378,7 @@ Computes categorical cross-entropy loss for multi-class classification.
 
 **Formula:** L = -Σ(y_true * log(y_pred))
 
-**Location:** ft_mlp/loss_functions.py:4
+**Location:** src/ft_mlp/loss_functions.py:4
 
 ---
 
@@ -292,7 +394,7 @@ Computes binary cross-entropy loss (used for evaluation).
 
 **Formula:** L = -(y*log(p) + (1-y)*log(1-p))
 
-**Location:** ft_mlp/loss_functions.py:21
+**Location:** src/ft_mlp/loss_functions.py:21
 
 ---
 
@@ -310,7 +412,7 @@ Standardizes dataframe columns using z-score normalization.
 
 **Formula:** z = (x - μ) / σ
 
-**Location:** ft_mlp/preprocessing.py:196
+**Location:** src/ft_mlp/preprocessing.py:196
 
 ---
 
@@ -325,7 +427,7 @@ Splits dataframe into training and validation sets.
 **Returns:**
 - `tuple[pd.DataFrame, pd.DataFrame]`: (training_set, validation_set)
 
-**Location:** ft_mlp/preprocessing.py:220
+**Location:** src/ft_mlp/preprocessing.py:220
 
 ---
 
@@ -341,7 +443,7 @@ Converts categorical labels to one-hot encoded format.
 
 **Example:** ['M', 'B', 'M'] → [[1, 0], [0, 1], [1, 0]]
 
-**Location:** ft_mlp/preprocessing.py:83
+**Location:** src/ft_mlp/preprocessing.py:83
 
 ---
 
@@ -362,7 +464,7 @@ Creates and initializes the complete model structure.
   - Datasets (training and validation)
   - Optimizer configuration
 
-**Location:** ft_mlp/create_model.py:208
+**Location:** src/ft_mlp/create_model.py:208
 
 ---
 
@@ -377,7 +479,7 @@ Initializes model weights and biases using He initialization.
 
 **Weight Initialization:** He Normal (w ~ N(0, sqrt(2/n_inputs)))
 
-**Location:** train.py:171
+**Location:** src/ft_mlp/train.py:171
 
 ---
 
@@ -388,7 +490,7 @@ Saves model structure to JSON file.
 - `filename` (str): Output filename (e.g., "model.json")
 - `model` (dict): Model structure to save
 
-**Location:** ft_mlp/model_utils.py:164
+**Location:** src/ft_mlp/model_utils.py:164
 
 ---
 
@@ -399,7 +501,7 @@ Saves model weights and biases to compressed numpy file.
 - `filename` (str): Output filename (e.g., "weights.npz")
 - `model` (dict): Model with trained weights
 
-**Location:** ft_mlp/model_utils.py:129
+**Location:** src/ft_mlp/model_utils.py:129
 
 ---
 
@@ -416,7 +518,7 @@ Loads trained model for making predictions.
 **Returns:**
 - `dict`: Loaded model ready for prediction
 
-**Location:** ft_mlp/load_predict_model.py
+**Location:** src/ft_mlp/load_predict_model.py
 
 ---
 
@@ -436,7 +538,7 @@ Initializes weights using He initialization (optimal for ReLU/sigmoid).
 
 **Formula:** w ~ N(0, sqrt(2/n_inputs))
 
-**Location:** ft_mlp/initializer.py:17
+**Location:** src/ft_mlp/initializer.py:17
 
 ---
 
@@ -452,7 +554,7 @@ Computes classification accuracy.
 **Returns:**
 - `float`: Accuracy as ratio of correct predictions (0.0-1.0)
 
-**Location:** ft_mlp/model_utils.py:210
+**Location:** src/ft_mlp/model_utils.py:210
 
 ---
 
@@ -466,7 +568,7 @@ Generates shuffled indices for mini-batch training.
 **Returns:**
 - `np.ndarray`: Permuted indices array
 
-**Location:** ft_mlp/model_utils.py:49
+**Location:** src/ft_mlp/model_utils.py:49
 
 ---
 

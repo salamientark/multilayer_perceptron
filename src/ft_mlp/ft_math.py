@@ -33,10 +33,13 @@ def ft_mean(
     c = count
     if c is None:
         c = len(array)
-    mean = 0
+    # Summing first and dividing once is more accurate than accumulating
+    # (1/c) * x per element, which drifts enough that a constant column
+    # gets a non-zero standard deviation.
+    total = 0.
     for i in range(c):
-        mean += (1. / float(c)) * array[i]
-    return mean
+        total += array[i]
+    return total / float(c)
 
 
 def ft_variance(

@@ -12,41 +12,44 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
-    
+
     steps:
     # Step 1: Check out the code from the repository
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    # Step 2: Set up Python environment
-    - name: Set up Python
-      uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
-    
+        # CI never pushes; do not leave GITHUB_TOKEN in .git/config
+        persist-credentials: false
+
+    # Step 2: Install uv (also provides the requested Python)
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        python-version: ${{ matrix.python-version }}
+
     # Step 3: Install dependencies
     - name: Install dependencies
-      run: make && source .venv/bin/activate
-    
+      run: uv sync --locked
+
     # Step 4: Run code quality checks
     - name: Run flake8 linting
       run: make norminette
-      continue-on-error: true  # Don't fail CI if linting has issues
-    
+
     # Step 5: Verify test data files
     - name: Check test data files
       run: |
         ls -la tests/test_data/
         echo "Test data files verified"
-    
+
     # Step 6: Run comprehensive test suite
     - name: Run unit tests
       run: make test
-    
+
     # Step 7: Basic functionality test
-    - name: Test train.py help
-      run: .venv/bin/python train.py --help
-    
-    # Step 8: Test predict.py help  
-    - name: Test predict.py help
-      run: .venv/bin/python predict.py --help
+    - name: Test train help
+      run: uv run -m ft_mlp.train --help
+
+    # Step 8: Test predict help
+    - name: Test predict help
+      run: uv run -m ft_mlp.predict --help

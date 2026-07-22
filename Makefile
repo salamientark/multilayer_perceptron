@@ -1,16 +1,9 @@
 # Variables
 VENV_DIR = .venv
-PYTHON = $(VENV_DIR)/bin/python
-PIP = $(VENV_DIR)/bin/pip
-FLAKE8 = $(VENV_DIR)/bin/flake8
+UV = uv
 
-# Find all Python files in the project
-PY_FILES := ft_mlp/*.py \
-	analyse_data.py \
-	split_dataset.py \
-	train.py \
-	predict.py
-			
+# Find all Python files in the project (package, tests and helper scripts)
+PY_FILES := src tests scripts
 
 # Colors for output
 GREEN = \033[0;32m
@@ -18,7 +11,7 @@ YELLOW = \033[0;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: all norminette test clean fclean
+.PHONY: all norminette test clean fclean venv help
 
 all: $(VENV_DIR)
 	@echo -e "$(GREEN)[INFO]$(NC) Setting up virtual environment and dependencies..."
@@ -26,12 +19,10 @@ all: $(VENV_DIR)
 	@echo -e "$(GREEN)[INFO]$(NC) To use the virtual environment, run:"
 	@echo -e "$(YELLOW)source .venv/bin/activate$(NC)"
 
-$(VENV_DIR):
-	@echo -e "$(YELLOW)[INFO]$(NC) Creating virtual environment..."
-	python3 -m venv $(VENV_DIR)
-	@echo -e "$(YELLOW)[INFO]$(NC) Installing dependencies..."
-	$(PIP) install --upgrade pip
-	$(PIP) install numpy matplotlib pandas flake8 PyQt5 seaborn
+$(VENV_DIR): pyproject.toml uv.lock
+	@echo -e "$(YELLOW)[INFO]$(NC) Syncing virtual environment and dependencies..."
+	$(UV) sync
+	@touch $(VENV_DIR)
 	@echo -e "$(GREEN)[SUCCESS]$(NC) Virtual environment created and dependencies installed!"
 
 norminette: $(VENV_DIR)
@@ -39,20 +30,16 @@ norminette: $(VENV_DIR)
 	@if [ -z "$(PY_FILES)" ]; then \
 		echo -e "$(YELLOW)[WARNING]$(NC) No Python files found!"; \
 	else \
-		$(FLAKE8) $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; \
+		$(UV) run flake8 $(PY_FILES) && echo -e "$(GREEN)[SUCCESS]$(NC) All files pass norminette!" || { echo -e "$(RED)[ERROR]$(NC) Norminette violations found!"; exit 1; }; \
 	fi
 
 test: $(VENV_DIR)
-	@$(PYTHON) scripts/run_tests.py $(PYTHON)
+	@$(UV) run python scripts/run_tests.py
 
 clean:
-	@echo -e "$(YELLOW)[INFO]$(NC) Removing installed dependencies..."
-	@if [ -d "$(VENV_DIR)" ]; then \
-		$(PIP) freeze | xargs $(PIP) uninstall -y 2>/dev/null || true; \
-		echo -e "$(GREEN)[SUCCESS]$(NC) Dependencies removed!"; \
-	else \
-		echo -e "$(YELLOW)[WARNING]$(NC) No virtual environment found!"; \
-	fi
+	@echo -e "$(YELLOW)[INFO]$(NC) Removing Python caches..."
+	@find . -type d -name __pycache__ -not -path "./.venv/*" -exec rm -rf {} + 2>/dev/null || true
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Caches removed!"
 
 fclean: clean
 	@echo -e "$(YELLOW)[INFO]$(NC) Removing virtual environment..."
@@ -69,9 +56,9 @@ venv: $(VENV_DIR)
 
 help:
 	@echo "Available targets:"
-	@echo "  all        - Create .venv and install dependencies"
+	@echo "  all        - Sync .venv and install dependencies (uv sync)"
 	@echo "  venv       - Display how to activate virtual environment"
 	@echo "  norminette - Run flake8 on all Python files"
 	@echo "  test       - Run all unit tests in tests/ directory"
-	@echo "  clean      - Remove installed dependencies"
-	@echo "  fclean     - Remove dependencies and .venv directory"
+	@echo "  clean      - Remove Python caches"
+	@echo "  fclean     - Remove caches and .venv directory"

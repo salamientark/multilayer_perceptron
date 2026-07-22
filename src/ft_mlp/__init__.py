@@ -25,9 +25,6 @@ from .loss_functions import ( # noqa
         )
 from .model_utils import ( # noqa
         get_random_seed,
-        init_thetas,
-        unstandardized_thetas,
-        save_thetas,
         save_weights,
         load_weights_from_file,
         save_model,
@@ -46,11 +43,6 @@ from .network_layers import ( # noqa
         hidden_layer,
         predict
         )
-from .optimizers import ( # noqa
-        batch_gradient_descent,
-        stochastic_gradient_descent,
-        mini_batch_gradient_descent
-        )
 from .preprocessing import ( # noqa
         select_columns,
         get_numerical_features,
@@ -63,7 +55,7 @@ from .preprocessing import ( # noqa
         classify,
         standardize_array,
         standardize_df,
-        split_dataset
+        get_standardization_stats
         )
 from .colors import ( # noqa
         RED,
@@ -71,7 +63,4 @@ from .colors import ( # noqa
         RESET,
         BLUE
         )
-from .initializer import ( # noqa
-        init_weights_zero,
-        he_initialisation
-        )
+from .initializer import he_initialisation  # noqa

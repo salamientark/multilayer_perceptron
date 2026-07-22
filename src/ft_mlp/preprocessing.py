@@ -3,6 +3,12 @@ import pandas as pd
 from .ft_math import ft_mean, ft_std
 
 
+# A standard deviation below this is treated as zero. Floating point error
+# leaves a constant column with a tiny non-zero std, and dividing by it
+# turns a constant feature into arbitrary values instead of zeros.
+STD_EPSILON = 1e-9
+
+
 def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
     """Select o the specified columns from the dataframe.
 
@@ -18,7 +24,7 @@ def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
 
 def get_numerical_features(
         df: pd.DataFrame,
-        exclude: list = []
+        exclude: list | None = None
         ) -> list:
     """Get the numerical features name o from a dataframe.
 
@@ -29,6 +35,7 @@ def get_numerical_features(
     Returns:
       list: List of numerical features.
     """
+    exclude = exclude if exclude is not None else []
     columns = df.columns.tolist()
     filtered_features = []
     for col in columns:
@@ -80,17 +87,28 @@ def convert_classes_to_nbr(class_name: str, data: pd.Series) -> pd.Series:
     return converted_col.astype(int)
 
 
-def one_encode(df: pd.DataFrame, col: str) -> np.ndarray:
+def one_encode(df: pd.DataFrame, col: str,
+               class_list: list | None = None) -> np.ndarray:
     """Convert a column of class names to numerical values using one encoding
 
     Parameters:
       df (pd.DataFrame): Dataframe.
       col (str): Column name to convert.
+      class_list (list | None): Class order defining the output columns. If
+                                None, the order of first appearance in df is
+                                used. Always pass the model class list so that
+                                training and prediction agree on which output
+                                column means which class.
 
     Returns:
       np.ndarray[int]: Array of numerical values.
     """
-    class_list = get_class_list(df, col)
+    if class_list is None:
+        class_list = get_class_list(df, col)
+    unknown = {val for val in df[col] if val not in class_list}
+    if unknown:
+        raise Exception(f"Unknown class(es) {sorted(unknown)} in column "
+                        f"'{col}'. Known classes: {class_list}.")
     one_encoded_val = {}
     for _, c in enumerate(class_list):
         one_encoded_val[c] = [int(val == c) for val in class_list]
@@ -112,7 +130,7 @@ def remove_nan(col: np.ndarray) -> np.ndarray:
 
 def replace_nan(
         df: pd.DataFrame,
-        columns: list = [],
+        columns: list | None = None,
         func=None
         ) -> pd.DataFrame:
     """Replace NaN values in a dataframe with the mean of the column
@@ -137,7 +155,8 @@ def replace_nan(
     return new_df
 
 
-def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
+def remove_missing(df: pd.DataFrame,
+                   exclude: list[str] | None = None) -> pd.DataFrame:
     """Remove rows with missing values in the dataframe.
 
     Parameters:
@@ -147,6 +166,7 @@ def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
     Returns:
       pd.DataFrame: Dataframe without missing values.
     """
+    exclude = exclude if exclude is not None else []
     cleaned_df = df.copy()
     subset = [col for col in cleaned_df.columns if col not in exclude]
     cleaned_df.dropna(subset=subset, inplace=True)
@@ -190,31 +210,75 @@ def standardize_array(array: np.ndarray,
     m = mean if mean is not None else ft_mean(array)
     s = std if std is not None else ft_std(array)
     standardized = array.copy()
-    standardized = (standardized - m) / s if s != 0 else np.zeros(len(array))
+    standardized = ((standardized - m) / s if abs(s) > STD_EPSILON
+                    else np.zeros(len(array)))
     return standardized
 
 
-def standardize_df(df: pd.DataFrame, columns: list = []) -> pd.DataFrame:
+def get_standardization_stats(df: pd.DataFrame,
+                              columns: list | None = None) -> dict:
+    """Compute the mean and standard deviation of the specified columns
+
+    These statistics must be fitted on the training set only, then reused to
+    standardize the validation set and any prediction set. Recomputing them
+    per file would standardize different datasets against different scales.
+
+    Parameters:
+      df (pd.DataFrame): Dataframe to fit the statistics on.
+      columns (list) (optional): List of columns to use. If empty, all
+                                 numerical columns will be used.
+
+    Returns:
+      dict: {column: {'mean': float, 'std': float}}
+    """
+    if columns is None or not columns:
+        columns = get_numerical_features(df)
+    stats = {}
+    for col in columns:
+        col_data = np.array(df[col].values)
+        stats[col] = {
+                'mean': float(ft_mean(col_data)),
+                'std': float(ft_std(col_data))
+                }
+    return stats
+
+
+def standardize_df(df: pd.DataFrame, columns: list | None = None,
+                   stats: dict | None = None) -> pd.DataFrame:
     """Standardize the specified columns of a dataframe.
 
     Parameters:
       df (pd.DataFrame): Dataframe.
       columns (list) (optional): List of columns to standardize. If empty,
                                  all numerical columns will be standardized.
+      stats (dict | None) (optional): Precomputed {column: {'mean', 'std'}}
+                                 statistics, as returned by
+                                 get_standardization_stats(). If None, they
+                                 are computed from df itself.
 
     Returns:
       pd.DataFrame: Dataframe with standardized columns.
     """
     standardized_df = df.copy()
     if columns is None or not columns:
-        columns = get_numerical_features(standardized_df)
+        columns = (list(stats.keys()) if stats is not None
+                   else get_numerical_features(standardized_df))
     for col in columns:
         col_data = np.array(standardized_df[col].values)
-        std = ft_std(col_data)
-        if std == 0:
+        if stats is not None:
+            if col not in stats:
+                raise Exception(f"No standardization statistics for feature "
+                                f"'{col}'.")
+            mean = stats[col]['mean']
+            std = stats[col]['std']
+        else:
+            mean = ft_mean(col_data)
+            std = ft_std(col_data)
+        if abs(std) <= STD_EPSILON:
             standardized_df[col] = 0
         else:
-            standardized_df[col] = standardize_array(col_data, std=std)
+            standardized_df[col] = standardize_array(col_data, mean=mean,
+                                                     std=std)
     return standardized_df
 
 

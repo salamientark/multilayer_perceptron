@@ -1,45 +1,16 @@
+import argparse as ap
 import sys
 import pandas as pd
 import ft_mlp as ft_mlp
 import matplotlib as mlp
 from matplotlib import pyplot as plt
 import seaborn as sns
+from ft_mlp.dataset_io import read_dataset
+from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
 
 
-data_columns_names = [
-    "id",
-    "diagnosis",
-    "radius_mean",
-    "texture_mean",
-    "perimeter_mean",
-    "area_mean",
-    "smoothness_mean",
-    "compactness_mean",
-    "concativity_mean",
-    "concave_points_mean",
-    "symmetry_mean",
-    "fractal_dimension_mean",
-    "radius_std",
-    "texture_std",
-    "perimeter_std",
-    "area_std",
-    "smoothness_std",
-    "compactness_std",
-    "concativity_std",
-    "concave_points_std",
-    "symmetry_std",
-    "fractal_dimension_std",
-    "radius_worst",
-    "texture_worst",
-    "perimeter_worst",
-    "area_worst",
-    "smoothness_worst",
-    "compactness_worst",
-    "concativity_worst",
-    "concave_points_worst",
-    "symmetry_worst",
-    "fractal_dimension_worst"
-]
+# Data columns name (kept as a module attribute for callers/tests)
+data_columns_names = DATA_COLUMNS_NAMES
 
 
 def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
@@ -107,46 +78,59 @@ def heatmap(df: pd.DataFrame):
     plt.show()
 
 
-def main(ac: int, av: list):
+def parse_args():
+    """Parse program argument"""
+    parser = ap.ArgumentParser(
+            prog="analyse_data.py",
+            description="Show statistics and plots for a dataset.",
+            epilog=">^-^<")
+    parser.add_argument("dataset", type=str,
+                        help="Path to the input csv file.")
+    return parser.parse_args()
+
+
+def main(args: ap.Namespace):
     """Give basic detailles on data
 
     Parameters:
-      ac (int) : Number of parameters
-      av (list) : List of parameters
+      args (argparse.Namespace) : Parsed program arguments
     """
+    # Read csv file
+    df = read_dataset(args.dataset)
+
+    # Extract data and target
+    raw_data = df.drop(["id", "diagnosis"], axis=1)
+    raw_target = pd.Series(df["diagnosis"])
+
+    # Standardize data
+    standardized_data = ft_mlp.standardize_df(raw_data)
+
+    # Convert target to numeric
+    numeric_target = ft_mlp.convert_classes_to_nbr('M', raw_target)
+
+    # Describe data
+    ft_mlp.ft_describe(raw_data)
+
+    mean_data = standardized_data[data_columns_names[2:12]]
+    std_data = standardized_data[data_columns_names[12:22]]
+    worst_data = standardized_data[data_columns_names[22:32]]
+    pairplot(df, mean_data.columns.tolist(), "diagnosis")
+    pairplot(df, std_data.columns.tolist(), "diagnosis")
+    pairplot(df, worst_data.columns.tolist(), "diagnosis")
+
+    # Correlation heatmap
+    standardized_data['diagnosis'] = numeric_target
+    heatmap(standardized_data)
+
+
+def cli():
+    """Entry point for the command line."""
     try:
-        if ac != 2:
-            raise Exception("Usage: python analyzer.py <dataset.csv>")
-        # Read csv file
-        df = pd.read_csv(av[1], header=None)
-        df.columns = data_columns_names
-
-        # Extract data and target
-        raw_data = df.drop(["id", "diagnosis"], axis=1)
-        raw_target = pd.Series(df["diagnosis"])
-
-        # Standardize data
-        standardized_data = ft_mlp.standardize_df(raw_data)
-
-        # Convert target to numeric
-        numeric_target = ft_mlp.convert_classes_to_nbr('M', raw_target)
-
-        # Describe data
-        ft_mlp.ft_describe(raw_data)
-
-        mean_data = standardized_data[data_columns_names[2:12]]
-        std_data = standardized_data[data_columns_names[12:22]]
-        worst_data = standardized_data[data_columns_names[22:32]]
-        pairplot(df, mean_data.columns.tolist(), "diagnosis")
-        pairplot(df, std_data.columns.tolist(), "diagnosis")
-        pairplot(df, worst_data.columns.tolist(), "diagnosis")
-
-        # Correlation heatmap
-        standardized_data['diagnosis'] = numeric_target
-        heatmap(standardized_data)
+        main(parse_args())
     except Exception as e:
-        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    main(len(sys.argv), sys.argv)
+    cli()

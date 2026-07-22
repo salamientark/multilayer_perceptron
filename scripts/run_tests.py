@@ -10,6 +10,7 @@ import os
 import re
 from pathlib import Path
 
+
 # ANSI color codes
 class Colors:
     GREEN = '\033[0;32m'
@@ -18,6 +19,7 @@ class Colors:
     NC = '\033[0m'  # No Color
     BOLD = '\033[1m'
 
+
 def run_norminette():
     """Run make norminette and return results"""
     try:
@@ -25,11 +27,12 @@ def run_norminette():
         result = subprocess.run([
             'make', 'norminette'
         ], capture_output=True, text=True, cwd=project_root)
-        
+
         output = result.stdout + result.stderr
         # Parse output for SUCCESS/ERROR indicators
-        success = result.returncode == 0 and 'All files pass norminette!' in output
-        
+        success = (result.returncode == 0
+                   and 'All files pass norminette!' in output)
+
         return {
             'success': success,
             'output': output,
@@ -42,15 +45,16 @@ def run_norminette():
             'returncode': 1
         }
 
+
 def run_test_file(test_module, python_executable=None):
     """Run a single test file and return results"""
     if python_executable is None:
         python_executable = sys.executable
-    
+
     try:
         # Get project root directory
         project_root = Path(__file__).parent.parent
-        
+
         # Set up environment with project root in PYTHONPATH
         env = os.environ.copy()
         current_pythonpath = env.get('PYTHONPATH', '')
@@ -58,19 +62,19 @@ def run_test_file(test_module, python_executable=None):
             env['PYTHONPATH'] = f"{project_root}:{current_pythonpath}"
         else:
             env['PYTHONPATH'] = str(project_root)
-        
+
         result = subprocess.run([
             python_executable, '-m', 'unittest', test_module, '-v'
         ], capture_output=True, text=True, cwd=project_root, env=env)
-        
+
         output = result.stdout + result.stderr
-        
+
         # Count total tests (lines starting with test_)
         total_tests = len(re.findall(r'^test_\w+', output, re.MULTILINE))
-        
+
         # Count passed tests (lines ending with ... ok)
         passed_tests = len(re.findall(r'\.\.\.\ ok$', output, re.MULTILINE))
-        
+
         return {
             'total': total_tests,
             'passed': passed_tests,
@@ -87,15 +91,16 @@ def run_test_file(test_module, python_executable=None):
             'output': 'Test file not found'
         }
 
+
 def main():
     """Main test runner function"""
     # Check if we have a python executable passed as argument (from Makefile)
     python_executable = sys.argv[1] if len(sys.argv) > 1 else sys.executable
-    
+
     # Run norminette first
     print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running norminette (flake8)...")
     norminette_result = run_norminette()
-    
+
     if norminette_result['success']:
         print(f"{Colors.GREEN}[SUCCESS]{Colors.NC} All files pass norminette!")
     else:
@@ -103,63 +108,79 @@ def main():
         # Print the actual output to see what failed
         if norminette_result['output']:
             print(norminette_result['output'])
-    
+
     print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running unit tests...")
-    
+
     # Define test modules to run
     test_modules = [
         ('tests.test_arg_parser', 'Argument Parser'),
         ('tests.test_create_model', 'Model Creation'),
+        ('tests.test_math_core', 'Math Core'),
+        ('tests.test_ft_math', 'Math Helpers'),
+        ('tests.test_preprocessing', 'Preprocessing'),
+        ('tests.test_model_utils', 'Model Utils'),
+        ('tests.test_analysis', 'Data Analysis'),
+        ('tests.test_programs', 'Programs (E2E)'),
+        ('tests.test_regressions', 'Regressions'),
     ]
-    
+
     total_tests = 0
     total_passed = 0
     results = []
-    
+
     # Run each test module
     for module, name in test_modules:
-        print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running {name.lower()} tests...")
-        
+        print(f"{Colors.YELLOW}[INFO]{Colors.NC} Running "
+              f"{name.lower()} tests...")
+
         result = run_test_file(module, python_executable)
         results.append((name, result))
-        
+
         total_tests += result['total']
         total_passed += result['passed']
-        
+
         if result['total'] > 0:
             if result['success']:
-                print(f"{Colors.GREEN}[SUCCESS]{Colors.NC} {name} tests: {result['passed']}/{result['total']} passed!")
+                print(f"{Colors.GREEN}[SUCCESS]{Colors.NC} {name} tests: "
+                      f"{result['passed']}/{result['total']} passed!")
             else:
-                print(f"{Colors.RED}[ERROR]{Colors.NC} {name} tests: {result['passed']}/{result['total']} passed!")
+                print(f"{Colors.RED}[ERROR]{Colors.NC} {name} tests: "
+                      f"{result['passed']}/{result['total']} passed!")
         else:
-            print(f"{Colors.YELLOW}[WARNING]{Colors.NC} {name} tests: File not found or no tests")
-    
+            print(f"{Colors.YELLOW}[WARNING]{Colors.NC} {name} tests: "
+                  "File not found or no tests")
+
     # Print summary
     print(f"{Colors.YELLOW}{'=' * 40}{Colors.NC}")
     print(f"{Colors.BOLD}TEST SUMMARY{Colors.NC}")
     print(f"{Colors.YELLOW}{'=' * 40}{Colors.NC}")
-    
+
     # Add norminette result to summary
     norminette_status = "✓" if norminette_result['success'] else "✗"
     print(f"{'Norminette (flake8)':25}: {norminette_status}")
-    
+
     for name, result in results:
         print(f"{name:25}: {result['passed']}/{result['total']}")
-    
+
     print(f"{Colors.YELLOW}{'=' * 40}{Colors.NC}")
-    
+
     # Overall success requires both norminette and tests to pass
-    all_success = (total_passed == total_tests and total_tests > 0 and norminette_result['success'])
-    
+    all_success = (total_passed == total_tests and total_tests > 0
+                   and norminette_result['success'])
+
     if all_success:
-        print(f"{Colors.GREEN}TOTAL: {total_passed}/{total_tests} individual tests passed ✓{Colors.NC}")
+        print(f"{Colors.GREEN}TOTAL: {total_passed}/{total_tests} "
+              f"individual tests passed ✓{Colors.NC}")
         print(f"{Colors.GREEN}All checks passed! ✓{Colors.NC}")
         return 0
     else:
-        print(f"{Colors.RED}TOTAL: {total_passed}/{total_tests} individual tests passed {'✓' if total_passed == total_tests else '✗'}{Colors.NC}")
+        mark = "✓" if total_passed == total_tests else "✗"
+        print(f"{Colors.RED}TOTAL: {total_passed}/{total_tests} "
+              f"individual tests passed {mark}{Colors.NC}")
         if not norminette_result['success']:
             print(f"{Colors.RED}Norminette check failed ✗{Colors.NC}")
         return 1
+
 
 if __name__ == '__main__':
     sys.exit(main())

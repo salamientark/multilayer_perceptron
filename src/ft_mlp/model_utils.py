@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .ft_math import ft_mean, ft_std
+from .ft_math import ft_argmax
 from .network_layers import sigmoid, softmax
 from .loss_functions import categorical_cross_entropy
 from .colors import BLUE, GREEN, RESET
@@ -54,7 +54,7 @@ def get_random_batch_indexes(
     Parameters:
       data_size (int): Size of the dataset
     seed (int) (optional) : Seed for random generator
-                            (train will use seed * actual epoch for
+                            (train will use seed + actual epoch for
                             reproducible results)
 
     Returns:
@@ -64,66 +64,6 @@ def get_random_batch_indexes(
         else np.random.default_rng(seed)
     permutated_indexes = rng.permutation(data_size)
     return permutated_indexes
-
-
-def init_thetas(classes: list, feature_nbr: int) -> dict:
-    """Initialize thetas dictionary with zeros
-
-    Parameters:
-      classes (list): List of class names
-      feature_nbr (int): Number of features
-
-    Returns:
-      (dict): theta parameters for each class
-    """
-    thetas = {cls: np.zeros(feature_nbr) for cls in classes}
-    return thetas
-
-
-def unstandardized_thetas(
-        thetas: dict,
-        df: pd.DataFrame,
-        features: list
-        ) -> dict:
-    """Convert standardized thetas to unstandardized thetas
-
-    Parameters:
-      thetas (dict): Standardized thetas
-      df (pd.DataFrame): Dataframe with original data
-      features (list): List of features names
-
-    Returns:
-      dict: Unstandardized thetas
-    """
-    means = {feature: ft_mean(df[feature].to_numpy()) for feature in features}
-    std = {feature: ft_std(df[feature], mean=means[feature])
-           for feature in features}
-    unstandardized = {
-        cls: [
-            theta[0] - sum(
-                (theta[i] * means[features[i - 1]]) / std[features[i - 1]]
-                for i in range(1, len(theta))
-            )
-        ] + [
-            theta[i] / std[features[i - 1]]
-            for i in range(1, len(theta))
-        ]
-        for cls, theta in thetas.items()
-    }
-    return unstandardized
-
-
-def save_thetas(thetas: dict, features: list) -> None:
-    """Save thetas to a file
-
-    Parameters:
-      thetas (dict): Thetas to save
-      features (list): List of features names
-    """
-    with open("thetas.csv", "w") as f:
-        f.write("Class,Bias," + ",".join(features) + "\n")
-        for cls, theta in thetas.items():
-            f.write(cls + "," + ",".join([str(t) for t in theta]) + "\n")
 
 
 def save_weights(filename: str, model: dict):
@@ -180,6 +120,12 @@ def save_model(filename: str, model: dict):
     model_template['optimizer'] = model['optimizer']
     model_template['features'] = model['features']
     model_template['target'] = model['target']
+    # Output column i means classes[i]. Without this, predict would re-derive
+    # the order from the prediction file and could invert the classes.
+    model_template['classes'] = model['classes']
+    # Fitted on the training set. Predict must reuse these rather than
+    # recompute them from the prediction file.
+    model_template['standardization'] = model['standardization']
 
     model_template['input'] = {}
     model_template['input']['shape'] = model['input']['shape']
@@ -217,8 +163,8 @@ def calculate_accuracy(predictions: np.ndarray, truth: np.ndarray) -> float:
     Returns:
       float: Accuracy value
     """
-    prediction_indexes = np.argmax(predictions, axis=1)
-    truth_indexes = np.argmax(truth, axis=1)
+    prediction_indexes = ft_argmax(predictions)
+    truth_indexes = ft_argmax(truth)
     good_prediction = (prediction_indexes == truth_indexes)
     accuracy = np.sum(good_prediction) / len(good_prediction)
     return accuracy

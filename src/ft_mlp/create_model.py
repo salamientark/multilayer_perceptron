@@ -1,9 +1,11 @@
 import json as json
 import pandas as pd
+from .dataset_io import read_dataset
 from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
 from .initializer import he_initialisation
-from .preprocessing import split_dataset, standardize_df
+from .preprocessing import (split_dataset, standardize_df, get_class_list,
+                            get_standardization_stats)
 
 
 FUNCTION_MAP = {
@@ -17,6 +19,25 @@ FUNCTION_MAP = {
 DERIVATIVE_MAP = {
         sigmoid: sigmoid_derivative
         }
+
+
+def get_function(name: str):
+    """Resolve a function name from a configuration file
+
+    Parameters:
+      name (str): Name of the function as written in the config file
+
+    Returns:
+      The matching function
+
+    Raises:
+      Exception: If the name is not a function the library implements
+    """
+    if name not in FUNCTION_MAP:
+        known = ', '.join(sorted(FUNCTION_MAP))
+        raise Exception(f"Unknown function '{name}' in the configuration "
+                        f"file. Known functions: {known}.")
+    return FUNCTION_MAP[name]
 
 
 def init_model_template() -> dict:
@@ -39,6 +60,8 @@ def init_model_template() -> dict:
             'optimizer': None,
             'features': None,
             'target': None,
+            'classes': None,      # Class order of the output layer columns
+            'standardization': None,  # Per-feature mean/std fitted on train
             'input': {
                 'shape': None,
                 },        # Input layer configuration
@@ -50,33 +73,6 @@ def init_model_template() -> dict:
                 }          # Output layer configuration
             }
     return model
-
-
-def create_model_layer(shape: int, activation=None, weight_init=None) -> dict:
-    """Create a model layer for the multilayer perceptron
-
-    Parameters:
-      shape (int): Number of neurons in the layer
-      activation (function, optional): Activation function for the layer.
-                                 Defaults to sigmoid if None.
-      weight_init (function, optional): Weight initialization function.
-                                    Defaults to zero initialization if None.
-
-    Returns:
-      dict: Dictionary reenting the layer with keys for shape,
-            activation function, and weight initialization function
-    """
-    layer = {
-            'shape': shape,
-            'activation': (activation if activation is not None
-                           else sigmoid),
-            'weight_initializer': (weight_init if weight_init is not None
-                                   else he_initialisation),
-            'derivative': (DERIVATIVE_MAP[activation] if activation
-                           is not None and activation in DERIVATIVE_MAP
-                           else sigmoid_derivative)
-            }
-    return layer
 
 
 def fill_model_from_json(model: dict, config_file) -> dict:
@@ -91,7 +87,7 @@ def fill_model_from_json(model: dict, config_file) -> dict:
     """
     conf = json.load(config_file)
     simple_keys = ['epoch', 'alpha', 'batch', 'loss', 'seed', 'inputs',
-                   'features', 'target']
+                   'features', 'target', 'classes', 'standardization']
     input_keys = model['input'].keys()
     layer_keys = model['output'].keys()
     function_keys = ['activation', 'weights_initializer', 'loss']
@@ -103,19 +99,19 @@ def fill_model_from_json(model: dict, config_file) -> dict:
                 continue
             if k in simple_keys:
                 model[k] = (conf[k] if k not in function_keys
-                            else FUNCTION_MAP[conf[k]])
+                            else get_function(conf[k]))
             elif k == 'input':
-                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                model[k] = {sub_k: (get_function(val) if sub_k in function_keys
                                     else val)
                             for sub_k, val in conf[k].items()
                             if sub_k in input_keys}
             elif k == 'output':
-                model[k] = {sub_k: (FUNCTION_MAP[val] if sub_k in function_keys
+                model[k] = {sub_k: (get_function(val) if sub_k in function_keys
                                     else val)
                             for sub_k, val in conf[k].items() if sub_k
                             in layer_keys}
             else:  # output or layers
-                model[k] = [{sub_k: (FUNCTION_MAP[val] if sub_k
+                model[k] = [{sub_k: (get_function(val) if sub_k
                                      in function_keys else val)
                             for sub_k, val in layer.items() if sub_k
                              in layer_keys}
@@ -171,7 +167,8 @@ def fill_model_datasets(
         training_rate: float,
         seed: int,
         target: str,
-        features: list | None = None
+        features: list | None = None,
+        validation=None
         ) -> dict:
     """Split dataset and fill model with training and validation set
 
@@ -183,22 +180,45 @@ def fill_model_datasets(
       features (list, optional): List of feature column names to use.
                                  If empty, uses every column except target
       target (str): Name of the target column in the dataset``
+      validation (str, optional): Path to an explicit validation set. When
+                                  given, the dataset is used whole for
+                                  training and training_rate is ignored.
 
     Returns:
       dict: Model parameters populated with training and validation datasets
     """
-    df = pd.read_csv(dataset)
+    df = read_dataset(dataset)
     if features is None:
         features = [col for col in df.columns
                     if col != target and col != 'id']
     filtered_df = pd.DataFrame(df[features + [target]])
-    standardized_data = standardize_df(filtered_df)
-    model['data_train'], model['data_test'] = split_dataset(
-            standardized_data, ratio=training_rate, seed=seed)
+    # Split before standardizing, and fit the statistics on the training set
+    # only: standardizing the whole dataframe first would leak the validation
+    # set's mean/std into training.
+    if validation is not None:
+        validation_df = read_dataset(validation)
+        train_df = filtered_df
+        test_df = pd.DataFrame(validation_df[features + [target]])
+    else:
+        train_df, test_df = split_dataset(filtered_df, ratio=training_rate,
+                                          seed=seed)
+    model['standardization'] = get_standardization_stats(train_df, features)
+    model['data_train'] = standardize_df(train_df, features,
+                                         model['standardization'])
+    model['data_test'] = standardize_df(test_df, features,
+                                        model['standardization'])
     model['input']['train_data'] = model['data_train'][features].to_numpy()
     model['input']['test_data'] = model['data_test'][features].to_numpy()
     model['output']['activation'] = softmax
-    model['output']['shape'] = filtered_df[target].nunique()
+    # Derived from the whole dataframe, before the split, so the order does
+    # not depend on which rows land in the training set. Saved with the model
+    # and reused at prediction time. With an explicit validation set the two
+    # frames come from different files, so both must be scanned or a class
+    # living only in the validation file would be missing from the list.
+    classes_source = (pd.concat([train_df, test_df]) if validation is not None
+                      else filtered_df)
+    model['classes'] = get_class_list(classes_source, target)
+    model['output']['shape'] = len(model['classes'])
     model['features'] = features
     model['input']['shape'] = len(features)
     model['target'] = target
@@ -219,10 +239,13 @@ def create_model(args, target: str, features: list | None = None) -> dict:
         model['features'] = features
         model['input']['shape'] = len(features)
     if args.conf is not None:
-        model = fill_model_from_json(model, args.conf)
+        # args.conf is a path: fill_model_from_json needs an open file.
+        with open(args.conf, 'r') as config_file:
+            model = fill_model_from_json(model, config_file)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
-                                model['seed'], target, model['features'])
+                                model['seed'], target, model['features'],
+                                getattr(args, 'validation', None))
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']
@@ -240,7 +263,12 @@ def create_model(args, target: str, features: list | None = None) -> dict:
 
     # Set derivatives for each layer
     for layer in model['layers']:
-        layer['derivative'] = DERIVATIVE_MAP[layer['activation']]
+        activation = layer['activation']
+        if activation not in DERIVATIVE_MAP:
+            name = getattr(activation, '__name__', activation)
+            raise Exception(f"No derivative is implemented for the '{name}' "
+                            "activation. Hidden layers must use sigmoid.")
+        layer['derivative'] = DERIVATIVE_MAP[activation]
     return model
 
 

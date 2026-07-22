@@ -24,22 +24,26 @@ proper handling of command-line arguments and validation logic.
 import unittest
 import sys
 import io
+import contextlib
 import argparse
-from train import parse_args, validate_args
+from ft_mlp.train import (parse_args, validate_args, DEFAULT_SHAPE,
+                          DEFAULT_EPOCH, DEFAULT_ALPHA, DEFAULT_BATCH,
+                          DEFAULT_SEED)
+
 
 class TestArgParser(unittest.TestCase):
     """Test class for argument parsing functionality"""
-    
+
     def setUp(self):
         """Set up test fixtures before each test method"""
         # Store original argv to restore after each test
         self.original_argv = sys.argv
-    
+
     def tearDown(self):
         """Clean up after each test method"""
         # Always restore original argv
         sys.argv = self.original_argv
-    
+
     def test_parse_args_with_valid_shape(self):
         """Test parsing valid arguments with --shape option"""
         # ARRANGE: Set up fake command line arguments
@@ -53,10 +57,10 @@ class TestArgParser(unittest.TestCase):
             '--train_ratio', '0.75',
             '--batch', '16',
         ]
-        
+
         # ACT: Call the function
         args = parse_args()
-        
+
         # ASSERT: Check the results
         self.assertEqual(args.shape, [10, 5])
         self.assertEqual(args.dataset, 'data_training.csv')
@@ -65,7 +69,7 @@ class TestArgParser(unittest.TestCase):
         self.assertEqual(args.alpha, 0.009)  # learning_rate stored as alpha
         self.assertEqual(args.batch, 16)
         self.assertEqual(args.train_ratio, 0.75)
-    
+
     # Basic tests
     def test_parse_args_with_valid_layer_and_neurons(self):
         """Test parsing valid arguments with --layer and --neurons options"""
@@ -79,10 +83,11 @@ class TestArgParser(unittest.TestCase):
             '--batch', '17',
             'data_training.csv'
         ]
-        
+
         args = parse_args()
-        
-        self.assertEqual(args.layer, 3)
+
+        # --layer is nargs='+', so a lone count still arrives as a list
+        self.assertEqual(args.layer, [3])
         self.assertEqual(args.neurons, 8)
         self.assertEqual(args.dataset, 'data_training.csv')
         self.assertEqual(args.seed, 44)
@@ -97,9 +102,9 @@ class TestArgParser(unittest.TestCase):
             '--conf', 'model_config.json',
             'data_training.csv'
         ]
-        
+
         args = parse_args()
-        
+
         self.assertEqual(args.conf, 'model_config.json')
         self.assertEqual(args.dataset, 'data_training.csv')
 
@@ -115,60 +120,48 @@ class TestArgParser(unittest.TestCase):
             '--train_ratio', '0.75',
             '--batch', '16',
         ]
-        
+
         captured_stderr = io.StringIO()
         sys.stderr = captured_stderr
-        
+
         with self.assertRaises(SystemExit) as context:
             parse_args()
-        
+
         sys.stderr = sys.__stderr__  # Restore stderr
-        
+
         # Check exit code (argparse exits with 2 for argument errors)
         self.assertEqual(context.exception.code, 2)
-        
+
         # Check the error message
         error_message = captured_stderr.getvalue()
-        self.assertIn("error: the following arguments are required: dataset", error_message)
+        self.assertIn("error: the following arguments are required: "
+                      "dataset", error_message)
 
-    def test_parse_args_missing_shape_raises_exception(self):
-        """Test that parse_args raises exception when shape/neurons is missing"""
-        
-        # Mock sys.argv to simulate command line arguments
-        # Only provide arguments that will cause the error
+    def test_parse_args_without_shape_uses_default_topology(self):
+        """Test that omitting --shape/--layer/--conf yields the default shape
+
+        The subject requires at least two hidden layers by default, so the
+        program must run with no arguments beyond the dataset.
+        """
         sys.argv = [
             'train.py',
-            '--dataset', 'data_training.csv',
-            '--epoch', '100',
-            '--alpha', '0.01',
-            '--batch', '16',
-            '--train-ratio', '0.8'
+            'data_training.csv'
             # Intentionally omit --shape, --layer, and --conf
         ]
-        
-        # Capture stderr to check error message
-        captured_stderr = io.StringIO()
-        sys.stderr = captured_stderr
-        
-        with self.assertRaises(SystemExit) as context:
-            parse_args()
-        
-        sys.stderr = sys.__stderr__  # Restore stderr
-        
-        # Check exit code (argparse exits with 2 for argument errors)
-        self.assertEqual(context.exception.code, 2)
-        
-        # Check the error message
-        error_message = captured_stderr.getvalue()
-        self.assertIn("one of the arguments --shape --layer --conf is required", error_message)
 
-    # TEST validate_args MISSING ARGS
-    def test_validate_args_missing_seed_raises_exception(self):
-        """Test that validate_args raises exception when seed is missing"""
+        args = parse_args()
+        validate_args(args)
+
+        self.assertEqual(args.shape, DEFAULT_SHAPE)
+        self.assertGreaterEqual(len(args.shape), 2)
+
+    # TEST validate_args APPLIES DEFAULTS
+    def test_validate_args_missing_seed_uses_default(self):
+        """Test that validate_args fills in the default seed"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
-        args.seed = None  # Missing required parameter
+        args.seed = None  # Omitted parameter
         args.epoch = 100
         args.alpha = 0.01
         args.batch = 16
@@ -177,19 +170,18 @@ class TestArgParser(unittest.TestCase):
         args.shape = [10, 5]
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --seed/-s", str(context.exception))
 
-    def test_validate_args_missing_epoch_raises_exception(self):
-        """Test that validate_args raises exception when epoch is missing"""
+        validate_args(args)
+
+        self.assertEqual(args.seed, DEFAULT_SEED)
+
+    def test_validate_args_missing_epoch_uses_default(self):
+        """Test that validate_args fills in the default epoch"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
-        args.epoch = None  # Missing required parameter
+        args.epoch = None  # Omitted parameter
         args.alpha = 0.01
         args.batch = 16
         args.layer = None
@@ -197,35 +189,60 @@ class TestArgParser(unittest.TestCase):
         args.shape = [10, 5]
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --epoch/-e", str(context.exception))
 
-    def test_validate_args_missing_alpha_raises_exception(self):
-        """Test that validate_args raises exception when epoch is missing"""
+        validate_args(args)
+
+        self.assertEqual(args.epoch, DEFAULT_EPOCH)
+
+    def test_validate_args_missing_alpha_uses_default(self):
+        """Test that validate_args fills in the default learning rate"""
         # Create a mock args object
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
         args.epoch = 100
+        args.alpha = None  # Omitted parameter
+        args.batch = None  # Omitted parameter
+        args.layer = None
+        args.neurons = None
+        args.shape = [10, 5]
+        args.train_ratio = 0.8
+        args.dataset = "data_training.csv"
+
+        validate_args(args)
+
+        self.assertEqual(args.alpha, DEFAULT_ALPHA)
+        self.assertEqual(args.batch, DEFAULT_BATCH)
+
+    def test_validate_args_conf_does_not_get_defaults(self):
+        """Test that --conf leaves unset params as None
+
+        A default would silently override the values in the JSON config
+        file, since fill_model_from_param() overrides any non-None arg.
+        """
+        args = argparse.Namespace()
+        args.conf = "model_config.json"
+        args.seed = None
+        args.epoch = None
         args.alpha = None
-        args.batch = 16
+        args.batch = None
         args.layer = None
         args.neurons = None
-        args.shape = [10, 5]
+        args.shape = None
         args.train_ratio = 0.8
         args.dataset = "data_training.csv"
-        
-        with self.assertRaises(Exception) as context:
-            validate_args(args)
-        
-        self.assertIn("Enter value for --learning_rate/-a", str(context.exception))
+
+        validate_args(args)
+
+        self.assertIsNone(args.seed)
+        self.assertIsNone(args.epoch)
+        self.assertIsNone(args.alpha)
+        self.assertIsNone(args.batch)
+        self.assertIsNone(args.shape)
 
     # TEST validate_args INVALID ARGS
     def test_validate_args_seed_zero_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 0
@@ -236,14 +253,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Seed must be a positive integer", str(context.exception))
+
+        self.assertIn("Seed must be a positive integer",
+                      str(context.exception))
 
     def test_validate_args_seed_to_low_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = -1
@@ -254,14 +272,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Seed must be a positive integer", str(context.exception))
+
+        self.assertIn("Seed must be a positive integer",
+                      str(context.exception))
 
     def test_validate_args_epoch_to_low_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -272,14 +291,14 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
+
         self.assertIn("Number of epoch must be > 0.", str(context.exception))
 
     def test_validate_args_epoch_to_zero_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -290,14 +309,14 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
+
         self.assertIn("Number of epoch must be > 0.", str(context.exception))
 
     def test_validate_args_learning_rate_to_high_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -308,14 +327,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Learning rate must be in the range (0, 1]", str(context.exception))
+
+        self.assertIn("Learning rate must be in the range (0, 1]",
+                      str(context.exception))
 
     def test_validate_args_learning_rate_zero_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -326,14 +346,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Learning rate must be in the range (0, 1]", str(context.exception))
+
+        self.assertIn("Learning rate must be in the range (0, 1]",
+                      str(context.exception))
 
     def test_validate_args_learning_rate_to_low_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -344,14 +365,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Learning rate must be in the range (0, 1]", str(context.exception))
+
+        self.assertIn("Learning rate must be in the range (0, 1]",
+                      str(context.exception))
 
     def test_validate_args_batch_to_low_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -362,14 +384,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Batch size must be a positive integer.", str(context.exception))
+
+        self.assertIn("Batch size must be a positive integer.",
+                      str(context.exception))
 
     def test_validate_args_batch_zero_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -380,14 +403,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("Batch size must be a positive integer.", str(context.exception))
+
+        self.assertIn("Batch size must be a positive integer.",
+                      str(context.exception))
 
     def test_validate_args_negative_shape_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -398,14 +422,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [-1, 5, 10]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("All layer must have at least one neuron.", str(context.exception))
+
+        self.assertIn("All layer must have at least one neuron.",
+                      str(context.exception))
 
     def test_validate_args_zero_shape_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -416,14 +441,15 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 0, 10]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("All layer must have at least one neuron.", str(context.exception))
+
+        self.assertIn("All layer must have at least one neuron.",
+                      str(context.exception))
 
     def test_validate_args_neg_last_shape_raises_exception(self):
-        """Test that validate_args raises exception for invalid learning rate"""
+        """Test that validate_args rejects an invalid value"""
         args = argparse.Namespace()
         args.conf = None
         args.seed = 42
@@ -434,11 +460,77 @@ class TestArgParser(unittest.TestCase):
         args.neurons = None
         args.shape = [10, 5, -1]
         args.train_ratio = 0.8
-        
+
         with self.assertRaises(Exception) as context:
             validate_args(args)
-        
-        self.assertIn("All layer must have at least one neuron.", str(context.exception))
+
+        self.assertIn("All layer must have at least one neuron.",
+                      str(context.exception))
+
+
+class TestSubjectExampleCli(unittest.TestCase):
+    """The CLI printed in the subject (IV.3) must run verbatim.
+
+    An evaluator copy-pastes it, so `--layer 24 24 24`, `--epochs` and
+    `--batch_size` have to be accepted alongside the project's own
+    `--shape` / `--epoch` / `--batch` spellings.
+    """
+
+    def setUp(self):
+        self.original_argv = sys.argv
+
+    def tearDown(self):
+        sys.argv = self.original_argv
+
+    def _parse(self, *flags):
+        sys.argv = ['train.py', 'data_training.csv', *flags]
+        args = parse_args()
+        validate_args(args)
+        return args
+
+    def test_subject_example_is_accepted_verbatim(self):
+        args = self._parse('--layer', '24', '24', '24', '--epochs', '84',
+                           '--loss', 'categoricalCrossentropy',
+                           '--batch_size', '8', '--learning_rate', '0.0314')
+        self.assertEqual(args.shape, [24, 24, 24])
+        self.assertEqual(args.epoch, 84)
+        self.assertEqual(args.batch, 8)
+        self.assertAlmostEqual(args.alpha, 0.0314)
+
+    def test_epochs_and_epoch_are_the_same_option(self):
+        self.assertEqual(self._parse('--epochs', '7').epoch,
+                         self._parse('--epoch', '7').epoch)
+
+    def test_batch_size_and_batch_are_the_same_option(self):
+        self.assertEqual(self._parse('--batch_size', '7').batch,
+                         self._parse('--batch', '7').batch)
+
+    def test_single_layer_value_still_needs_neurons(self):
+        """The original `--layer <count> --neurons <width>` form is kept."""
+        self.assertEqual(self._parse('--layer', '3', '--neurons', '8').shape,
+                         [8, 8, 8])
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '3')
+        self.assertIn('MUST be used together', str(ctx.exception))
+
+    def test_layer_list_rejects_neurons(self):
+        """A width list plus --neurons is contradictory, not silently won."""
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '24', '24', '--neurons', '8')
+        self.assertIn('single --layer count', str(ctx.exception))
+
+    def test_zero_layers_is_rejected(self):
+        """`--layer 0 --neurons 8` used to yield a network with no hidden
+        layer instead of an error."""
+        with self.assertRaises(Exception) as ctx:
+            self._parse('--layer', '0', '--neurons', '8')
+        self.assertIn('at least one hidden layer', str(ctx.exception))
+
+    def test_layer_and_shape_remain_mutually_exclusive(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                self._parse('--shape', '4', '4', '--layer', '24', '24')
+
 
 if __name__ == '__main__':
     # Run the tests when this file is executed directly
