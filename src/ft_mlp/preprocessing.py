@@ -146,7 +146,8 @@ def replace_nan(
     """
     new_df = df.copy()
     f = func if func is not None else ft_mean
-    cols = columns if columns else new_df.columns
+    cols = (columns if columns is not None
+            else get_numerical_features(new_df))
     for column in cols:
         tmp_col = remove_nan(new_df[column].to_numpy())
         val = f(tmp_col)
