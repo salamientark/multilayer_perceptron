@@ -1,5 +1,6 @@
 import pandas as pd
 from .create_model import load_model_from_json
+from .dataset_io import read_dataset
 from .preprocessing import standardize_df, one_encode
 from .model_utils import load_weights_from_file
 
@@ -41,7 +42,7 @@ def load_predict_model_data(
     Returns:
       dict : Model structure with loaded dataset
     """
-    df = pd.read_csv(dataset)
+    df = read_dataset(dataset)
     if not features:
         features = df.columns.tolist()
     filtered_df = pd.DataFrame(df[features])

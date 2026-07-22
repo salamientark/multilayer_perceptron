@@ -1,5 +1,6 @@
 import json as json
 import pandas as pd
+from .dataset_io import read_dataset
 from .network_layers import sigmoid, sigmoid_derivative, softmax
 from .loss_functions import categorical_cross_entropy
 from .initializer import he_initialisation
@@ -166,7 +167,8 @@ def fill_model_datasets(
         training_rate: float,
         seed: int,
         target: str,
-        features: list | None = None
+        features: list | None = None,
+        validation=None
         ) -> dict:
     """Split dataset and fill model with training and validation set
 
@@ -178,11 +180,14 @@ def fill_model_datasets(
       features (list, optional): List of feature column names to use.
                                  If empty, uses every column except target
       target (str): Name of the target column in the dataset``
+      validation (str, optional): Path to an explicit validation set. When
+                                  given, the dataset is used whole for
+                                  training and training_rate is ignored.
 
     Returns:
       dict: Model parameters populated with training and validation datasets
     """
-    df = pd.read_csv(dataset)
+    df = read_dataset(dataset)
     if features is None:
         features = [col for col in df.columns
                     if col != target and col != 'id']
@@ -190,8 +195,13 @@ def fill_model_datasets(
     # Split before standardizing, and fit the statistics on the training set
     # only: standardizing the whole dataframe first would leak the validation
     # set's mean/std into training.
-    train_df, test_df = split_dataset(filtered_df, ratio=training_rate,
-                                      seed=seed)
+    if validation is not None:
+        validation_df = read_dataset(validation)
+        train_df = filtered_df
+        test_df = pd.DataFrame(validation_df[features + [target]])
+    else:
+        train_df, test_df = split_dataset(filtered_df, ratio=training_rate,
+                                          seed=seed)
     model['standardization'] = get_standardization_stats(train_df, features)
     model['data_train'] = standardize_df(train_df, features,
                                          model['standardization'])
@@ -230,7 +240,8 @@ def create_model(args, target: str, features: list | None = None) -> dict:
             model = fill_model_from_json(model, config_file)
     model = fill_model_from_param(args, model)
     model = fill_model_datasets(model, args.dataset, args.train_ratio,
-                                model['seed'], target, model['features'])
+                                model['seed'], target, model['features'],
+                                getattr(args, 'validation', None))
     # Set default loss function if not specified
     if model['loss'] is None:
         model['loss'] = FUNCTION_MAP['categoricalCrossentropy']

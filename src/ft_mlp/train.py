@@ -61,8 +61,12 @@ def parse_args():
                         help="Define a constant number of neurons for all "
                              "hidden layers (use with --layer).")
     parser.add_argument("--loss", choices=['categoricalCrossentropy'],
-                        help="Loss function to use "
-                             "(default: categoricalCrossentropy)")
+                        help="Training objective (default: "
+                             "categoricalCrossentropy). The output layer is "
+                             "a softmax over 2 one-hot classes, for which "
+                             "binary cross-entropy is mathematically "
+                             "identical; ft-predict reports it as the "
+                             "subject's evaluation metric.")
     parser.add_argument("--epoch", "--epochs", "-e", type=int,
                         help="Number of iteration of the trainig. "
                              f"(default: {DEFAULT_EPOCH})")
@@ -77,9 +81,14 @@ def parse_args():
                         help="Seed to make model reproducible "
                              f"(default: {DEFAULT_SEED})")
     parser.add_argument("--train_ratio", "-tr", type=float,
-                        default=DEFAULT_TRAIN_RATIO,
                         help="The part of the dataset used as the training "
-                             "set. (validation set ratio = 1 - train_ratio)")
+                             "set. (validation set ratio = 1 - train_ratio) "
+                             f"(default: {DEFAULT_TRAIN_RATIO})")
+    parser.add_argument("--validation", "-v", type=str, default=None,
+                        help="Explicit validation set csv, typically the "
+                             "second file written by ft-split-dataset. When "
+                             "given, the training dataset is used whole and "
+                             "--train_ratio is ignored.")
     parser.add_argument("--outfile", "-of", type=str,
                         default=DEFAULT_WEIGHTS_FILE,
                         help="Weight result file (npz). "
@@ -112,8 +121,6 @@ def validate_args(args):
             args.seed = DEFAULT_SEED
         if args.epoch is None:
             args.epoch = DEFAULT_EPOCH
-        if args.train_ratio is None:
-            args.train_ratio = DEFAULT_TRAIN_RATIO
         if args.alpha is None:
             args.alpha = DEFAULT_ALPHA
         if args.batch is None:
@@ -145,7 +152,15 @@ def validate_args(args):
         raise Exception("Learning rate must be in the range (0, 1]")
     if args.seed is not None and args.seed <= 0:
         raise Exception("Seed must be a positive integer")
-    if args.train_ratio is not None and not (0 < args.train_ratio < 1):
+    # An explicit validation set makes the ratio meaningless: refuse both
+    # rather than silently ignoring the one the user typed.
+    validation = getattr(args, 'validation', None)
+    if validation is not None and args.train_ratio is not None:
+        raise Exception("--validation and --train_ratio are mutually "
+                        "exclusive.")
+    if args.train_ratio is None:
+        args.train_ratio = DEFAULT_TRAIN_RATIO
+    if not (0 < args.train_ratio < 1):
         raise Exception("Train ratio must be between 0 and 1 excluded.")
     if args.batch is not None and args.batch <= 0:
         raise Exception("Batch size must be a positive integer.")

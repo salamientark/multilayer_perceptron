@@ -5,42 +5,12 @@ import ft_mlp as ft_mlp
 import matplotlib as mlp
 from matplotlib import pyplot as plt
 import seaborn as sns
+from ft_mlp.dataset_io import read_dataset
+from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
 
 
-data_columns_names = [
-    "id",
-    "diagnosis",
-    "radius_mean",
-    "texture_mean",
-    "perimeter_mean",
-    "area_mean",
-    "smoothness_mean",
-    "compactness_mean",
-    "concativity_mean",
-    "concave_points_mean",
-    "symmetry_mean",
-    "fractal_dimension_mean",
-    "radius_std",
-    "texture_std",
-    "perimeter_std",
-    "area_std",
-    "smoothness_std",
-    "compactness_std",
-    "concativity_std",
-    "concave_points_std",
-    "symmetry_std",
-    "fractal_dimension_std",
-    "radius_worst",
-    "texture_worst",
-    "perimeter_worst",
-    "area_worst",
-    "smoothness_worst",
-    "compactness_worst",
-    "concativity_worst",
-    "concave_points_worst",
-    "symmetry_worst",
-    "fractal_dimension_worst"
-]
+# Data columns name (kept as a module attribute for callers/tests)
+data_columns_names = DATA_COLUMNS_NAMES
 
 
 def pairplot(df: pd.DataFrame, features: list, target_col: str | None = None):
@@ -126,8 +96,7 @@ def main(args: ap.Namespace):
       args (argparse.Namespace) : Parsed program arguments
     """
     # Read csv file
-    df = pd.read_csv(args.dataset, header=None)
-    df.columns = data_columns_names
+    df = read_dataset(args.dataset)
 
     # Extract data and target
     raw_data = df.drop(["id", "diagnosis"], axis=1)

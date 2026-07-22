@@ -466,5 +466,89 @@ class TestSplitterDefaults(unittest.TestCase):
                          ['data_training.csv', 'data_validation.csv'])
 
 
+class TestHeaderlessDatasetReading(unittest.TestCase):
+    """S4: the raw data.csv is headerless, but train/predict read their csv
+    with an inferred header, so feeding the raw file straight in died with a
+    twelve-line pandas KeyError instead of just working."""
+
+    def test_headerless_file_gets_the_schema_column_names(self):
+        from ft_mlp.dataset_io import read_dataset
+        from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'raw.csv')
+            rows = [[i, 'M'] + [0.5] * 30 for i in range(3)]
+            pd.DataFrame(rows).to_csv(path, header=False, index=False)
+            df = read_dataset(path)
+        self.assertEqual(list(df.columns), DATA_COLUMNS_NAMES)
+        # No sample is consumed as a header row.
+        self.assertEqual(len(df), 3)
+
+    def test_file_with_header_is_read_as_is(self):
+        from ft_mlp.dataset_io import read_dataset
+        from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'split.csv')
+            rows = [[i, 'B'] + [0.5] * 30 for i in range(3)]
+            pd.DataFrame(rows, columns=DATA_COLUMNS_NAMES).to_csv(
+                path, index=False)
+            df = read_dataset(path)
+        self.assertEqual(list(df.columns), DATA_COLUMNS_NAMES)
+        self.assertEqual(len(df), 3)
+
+    def test_wrong_column_count_raises_a_readable_error(self):
+        from ft_mlp.dataset_io import read_dataset
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'bad.csv')
+            pd.DataFrame([[1, 2, 3]]).to_csv(path, header=False, index=False)
+            with self.assertRaises(Exception) as ctx:
+                read_dataset(path)
+        self.assertIn('expected 32', str(ctx.exception))
+
+
+class TestExplicitValidationSet(unittest.TestCase):
+    """S5: ft-split-dataset wrote a validation file that ft-train never read,
+    because train re-split its input internally. --validation consumes it."""
+
+    def _args(self, **overrides):
+        base = dict(conf=None, shape=[2], layer=None, neurons=None,
+                    epoch=1, alpha=0.1, batch=2, seed=1, train_ratio=None,
+                    validation=None, loss=None, features=None)
+        base.update(overrides)
+        return argparse.Namespace(**base)
+
+    def test_validation_and_train_ratio_are_mutually_exclusive(self):
+        args = self._args(validation='valid.csv', train_ratio=0.8)
+        with self.assertRaises(Exception) as ctx:
+            validate_args(args)
+        self.assertIn('mutually exclusive', str(ctx.exception))
+
+    def test_train_ratio_still_defaults_when_no_validation_given(self):
+        args = self._args()
+        validate_args(args)
+        self.assertIsNotNone(args.train_ratio)
+        self.assertTrue(0 < args.train_ratio < 1)
+
+    def test_explicit_validation_set_is_used_whole(self):
+        from ft_mlp.create_model import (fill_model_datasets,
+                                         init_model_template)
+        with tempfile.TemporaryDirectory() as tmp:
+            train_path = os.path.join(tmp, 'train.csv')
+            valid_path = os.path.join(tmp, 'valid.csv')
+            columns = FEATURES + [TARGET]
+            rng = np.random.default_rng(0)
+            for path, count in ((train_path, 20), (valid_path, 7)):
+                frame = pd.DataFrame(rng.normal(size=(count, 4)),
+                                     columns=FEATURES)
+                frame[TARGET] = ['M', 'B'] * (count // 2) + ['M'] * (count % 2)
+                frame[columns].to_csv(path, index=False)
+            model = fill_model_datasets(init_model_template(),
+                                        train_path, 0.8, 1,
+                                        TARGET, FEATURES,
+                                        validation=valid_path)
+        # No internal re-split: every row of each file is used as given.
+        self.assertEqual(len(model['input']['train_data']), 20)
+        self.assertEqual(len(model['input']['test_data']), 7)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

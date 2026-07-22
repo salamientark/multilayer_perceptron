@@ -1,45 +1,13 @@
 import argparse as ap
 import sys
-import pandas as pd
 from ft_mlp import RED, RESET, GREEN, BLUE
+from ft_mlp.dataset_io import read_dataset
+from ft_mlp.dataset_schema import DATA_COLUMNS_NAMES
 from ft_mlp.preprocessing import split_dataset
 
 
-# Data columns name
-data_columns_names = [
-    "id",
-    "diagnosis",
-    "radius_mean",
-    "texture_mean",
-    "perimeter_mean",
-    "area_mean",
-    "smoothness_mean",
-    "compactness_mean",
-    "concavity_mean",
-    "concave_points_mean",
-    "symmetry_mean",
-    "fractal_dimension_mean",
-    "radius_std",
-    "texture_std",
-    "perimeter_std",
-    "area_std",
-    "smoothness_std",
-    "compactness_std",
-    "concavity_std",
-    "concave_points_std",
-    "symmetry_std",
-    "fractal_dimension_std",
-    "radius_worst",
-    "texture_worst",
-    "perimeter_worst",
-    "area_worst",
-    "smoothness_worst",
-    "compactness_worst",
-    "concavity_worst",
-    "concave_points_worst",
-    "symmetry_worst",
-    "fractal_dimension_worst"
-]
+# Data columns name (kept as a module attribute for callers/tests)
+data_columns_names = DATA_COLUMNS_NAMES
 
 
 def parse_args():
@@ -109,11 +77,10 @@ def main(args):
       --train-ratio <float>  Ratio of training dataset (default: 0.8)
       --outfiles <str,str> or <str> <str>   Output files
     """
-    # Get Dataframe
-    # header=None: the dataset is headerless, without it pandas would
-    # consume the first sample as the header row and drop it.
-    df = pd.read_csv(args.dataset_path, header=None)
-    df.columns = data_columns_names
+    # Get Dataframe. read_dataset accepts the raw headerless data.csv as
+    # well as an already-split file that carries a header, so re-splitting
+    # an output of this program works too.
+    df = read_dataset(args.dataset_path)
 
     # Splitting
     train_set, test_set = split_dataset(df, ratio=args.train_ratio,
