@@ -1,4 +1,5 @@
 import argparse as ap
+import sys
 import numpy as np
 import ft_mlp as ft_mlp
 # Imported directly: `ft_mlp.predict` resolves to THIS module rather than the
@@ -152,7 +153,8 @@ def cli():
     try:
         main(args)
     except Exception as e:
-        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

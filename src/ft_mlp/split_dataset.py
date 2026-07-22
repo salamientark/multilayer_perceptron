@@ -1,4 +1,5 @@
 import argparse as ap
+import sys
 import pandas as pd
 from ft_mlp import RED, RESET, GREEN, BLUE
 from ft_mlp.preprocessing import split_dataset
@@ -108,35 +109,36 @@ def main(args):
       --train-ratio <float>  Ratio of training dataset (default: 0.8)
       --outfiles <str,str> or <str> <str>   Output files
     """
-    try:
-        # Get Dataframe
-        # header=None: the dataset is headerless, without it pandas would
-        # consume the first sample as the header row and drop it.
-        df = pd.read_csv(args.dataset_path, header=None)
-        df.columns = data_columns_names
+    # Get Dataframe
+    # header=None: the dataset is headerless, without it pandas would
+    # consume the first sample as the header row and drop it.
+    df = pd.read_csv(args.dataset_path, header=None)
+    df.columns = data_columns_names
 
-        # Splitting
-        train_set, test_set = split_dataset(df, ratio=args.train_ratio,
-                                            seed=args.seed)
+    # Splitting
+    train_set, test_set = split_dataset(df, ratio=args.train_ratio,
+                                        seed=args.seed)
 
-        # Writing to file
-        print(f"Saving training set to : {BLUE}{args.outfile[0]}{RESET} ... ",
-              end="")
-        train_set.to_csv(args.outfile[0], index=False)
-        print(f"{GREEN}OK!{RESET}")
+    # Writing to file
+    print(f"Saving training set to : {BLUE}{args.outfile[0]}{RESET} ... ",
+          end="")
+    train_set.to_csv(args.outfile[0], index=False)
+    print(f"{GREEN}OK!{RESET}")
 
-        print(f"Saving test set to     : {BLUE}{args.outfile[1]}{RESET} ... ",
-              end="")
-        test_set.to_csv(args.outfile[1], index=False)
-        print(f"{GREEN}OK!{RESET}")
-    except Exception as e:
-        print(f"{RED}Error{RESET}: {e}")
+    print(f"Saving test set to     : {BLUE}{args.outfile[1]}{RESET} ... ",
+          end="")
+    test_set.to_csv(args.outfile[1], index=False)
+    print(f"{GREEN}OK!{RESET}")
 
 
 def cli():
     """Entry point for the command line."""
     args = parse_args()
-    main(args)
+    try:
+        main(args)
+    except Exception as e:
+        print(f"{RED}Error{RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

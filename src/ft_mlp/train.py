@@ -1,4 +1,5 @@
 import argparse as ap
+import sys
 import numpy as np
 import ft_mlp as ft_mlp
 import matplotlib.pyplot as plt
@@ -474,7 +475,8 @@ def cli():
         validate_args(args)
         main(args)
     except Exception as e:
-        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -193,11 +193,25 @@ class TestAnalyseDataProgram(unittest.TestCase):
         self.assertEqual(pairplot.call_count, 3)
         self.assertEqual(heatmap.call_count, 1)
 
-    def test_main_reports_a_missing_file_as_an_error(self):
+    def test_cli_reports_a_missing_file_and_exits_non_zero(self):
+        original = sys.argv
+        try:
+            sys.argv = ['analyse_data.py', 'does_not_exist.csv']
+            with contextlib.redirect_stdout(io.StringIO()) as out, \
+                    contextlib.redirect_stderr(io.StringIO()) as err:
+                with self.assertRaises(SystemExit) as context:
+                    analyse_module.cli()
+        finally:
+            sys.argv = original
+        self.assertEqual(context.exception.code, 1)
+        self.assertIn('Error', err.getvalue())
+        self.assertNotIn('Error', out.getvalue())
+
+    def test_main_propagates_instead_of_swallowing(self):
+        """main() must not absorb failures; cli() owns reporting + exit."""
         args = argparse.Namespace(dataset='does_not_exist.csv')
-        with contextlib.redirect_stdout(io.StringIO()) as out:
+        with self.assertRaises(FileNotFoundError):
             analyse_module.main(args)
-        self.assertIn('Error', out.getvalue())
 
     @mock.patch('ft_mlp.analyse_data.sns.pairplot')
     @mock.patch('ft_mlp.analyse_data.plt')

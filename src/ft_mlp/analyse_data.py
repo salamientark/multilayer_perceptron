@@ -1,4 +1,5 @@
 import argparse as ap
+import sys
 import pandas as pd
 import ft_mlp as ft_mlp
 import matplotlib as mlp
@@ -124,41 +125,42 @@ def main(args: ap.Namespace):
     Parameters:
       args (argparse.Namespace) : Parsed program arguments
     """
-    try:
-        # Read csv file
-        df = pd.read_csv(args.dataset, header=None)
-        df.columns = data_columns_names
+    # Read csv file
+    df = pd.read_csv(args.dataset, header=None)
+    df.columns = data_columns_names
 
-        # Extract data and target
-        raw_data = df.drop(["id", "diagnosis"], axis=1)
-        raw_target = pd.Series(df["diagnosis"])
+    # Extract data and target
+    raw_data = df.drop(["id", "diagnosis"], axis=1)
+    raw_target = pd.Series(df["diagnosis"])
 
-        # Standardize data
-        standardized_data = ft_mlp.standardize_df(raw_data)
+    # Standardize data
+    standardized_data = ft_mlp.standardize_df(raw_data)
 
-        # Convert target to numeric
-        numeric_target = ft_mlp.convert_classes_to_nbr('M', raw_target)
+    # Convert target to numeric
+    numeric_target = ft_mlp.convert_classes_to_nbr('M', raw_target)
 
-        # Describe data
-        ft_mlp.ft_describe(raw_data)
+    # Describe data
+    ft_mlp.ft_describe(raw_data)
 
-        mean_data = standardized_data[data_columns_names[2:12]]
-        std_data = standardized_data[data_columns_names[12:22]]
-        worst_data = standardized_data[data_columns_names[22:32]]
-        pairplot(df, mean_data.columns.tolist(), "diagnosis")
-        pairplot(df, std_data.columns.tolist(), "diagnosis")
-        pairplot(df, worst_data.columns.tolist(), "diagnosis")
+    mean_data = standardized_data[data_columns_names[2:12]]
+    std_data = standardized_data[data_columns_names[12:22]]
+    worst_data = standardized_data[data_columns_names[22:32]]
+    pairplot(df, mean_data.columns.tolist(), "diagnosis")
+    pairplot(df, std_data.columns.tolist(), "diagnosis")
+    pairplot(df, worst_data.columns.tolist(), "diagnosis")
 
-        # Correlation heatmap
-        standardized_data['diagnosis'] = numeric_target
-        heatmap(standardized_data)
-    except Exception as e:
-        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}")
+    # Correlation heatmap
+    standardized_data['diagnosis'] = numeric_target
+    heatmap(standardized_data)
 
 
 def cli():
     """Entry point for the command line."""
-    main(parse_args())
+    try:
+        main(parse_args())
+    except Exception as e:
+        print(f"{ft_mlp.RED}Error{ft_mlp.RESET}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

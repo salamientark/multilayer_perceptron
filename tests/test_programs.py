@@ -188,32 +188,41 @@ class TestProgramsEndToEnd(unittest.TestCase):
 
 
 class TestProgramErrorHandling(unittest.TestCase):
-    """Bad input must produce 'Error: ...' and no traceback"""
+    """Bad input must print 'Error: ...' on stderr, exit 1, and show no
+    traceback. The non-zero status is what lets an evaluator chain the
+    programs with && without a failure silently sliding through."""
+
+    def assertFailsWith(self, expected, *args_v, module):
+        """Run module.cli() with argv and assert it exits 1 with `expected`
+        on stderr and nothing leaking onto stdout."""
+        with argv(*args_v), \
+                contextlib.redirect_stdout(io.StringIO()) as out, \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            with self.assertRaises(SystemExit) as ctx:
+                module.cli()
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertIn(expected, strip_ansi(err.getvalue()))
+        self.assertNotIn('Error', out.getvalue())
+        self.assertNotIn('Traceback', err.getvalue())
 
     def test_train_missing_dataset_reports_an_error(self):
-        with argv('train.py', 'does_not_exist.csv'), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            train_module.cli()
-        self.assertIn('Error', out.getvalue())
+        self.assertFailsWith('Error', 'train.py', 'does_not_exist.csv',
+                             module=train_module)
 
     def test_train_rejects_bad_learning_rate(self):
-        with argv('train.py', 'x.csv', '-a', '5'), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            train_module.cli()
-        self.assertIn('Learning rate must be in the range', out.getvalue())
+        self.assertFailsWith('Learning rate must be in the range',
+                             'train.py', 'x.csv', '-a', '5',
+                             module=train_module)
 
     def test_train_rejects_layer_without_neurons(self):
-        with argv('train.py', 'x.csv', '--layer', '3'), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            train_module.cli()
-        self.assertIn('MUST be used together', out.getvalue())
+        self.assertFailsWith('MUST be used together',
+                             'train.py', 'x.csv', '--layer', '3',
+                             module=train_module)
 
     def test_predict_missing_model_reports_an_error(self):
-        with argv('predict.py', '-m', 'nope.json', '-w', 'nope.npz',
-                  '-d', 'nope.csv'), \
-                contextlib.redirect_stdout(io.StringIO()) as out:
-            predict_module.cli()
-        self.assertIn('Error', out.getvalue())
+        self.assertFailsWith('Error', 'predict.py', '-m', 'nope.json',
+                             '-w', 'nope.npz', '-d', 'nope.csv',
+                             module=predict_module)
 
     def test_split_rejects_bad_ratio(self):
         with argv('split_dataset.py', 'x.csv', '-r', '1.5'), \
@@ -249,12 +258,16 @@ class TestProgramErrorHandling(unittest.TestCase):
         self.assertIn('required: dataset_path', err.getvalue())
 
     def test_split_missing_file_reports_an_error(self):
+        self.assertFailsWith('Error', 'split_dataset.py', 'nope.csv',
+                             '-o', 'a.csv', 'b.csv', module=split_module)
+
+    def test_split_main_propagates_instead_of_swallowing(self):
+        """main() must not absorb failures; cli() owns reporting + exit."""
         args = __import__('argparse').Namespace(
                 dataset_path='nope.csv', outfile=['a.csv', 'b.csv'],
                 seed=1, train_ratio=0.8)
-        with contextlib.redirect_stdout(io.StringIO()) as out:
+        with self.assertRaises(FileNotFoundError):
             split_module.main(args)
-        self.assertIn('Error', out.getvalue())
 
 
 class TestOneDecoded(unittest.TestCase):
