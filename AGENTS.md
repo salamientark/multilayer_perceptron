@@ -10,7 +10,7 @@
 ## Build/Test/Lint Commands
 - `uv sync` (or `make`) - Create `.venv` and install dependencies from `uv.lock`
 - `make test` - Run flake8 + the full unit test suite
-- `make norminette` - Run flake8 on `src/ft_mlp/*.py`
+- `make norminette` - Run flake8 on `src`, `tests` and `scripts` (Makefile `PY_FILES`)
 - `uv run -m ft_mlp.train --help` - Display training options and parameters
 - `uv run -m ft_mlp.split_dataset data.csv` - Split dataset into training/validation sets
 - `uv run -m ft_mlp.train --shape 24 16 --epoch 100 -a 0.1 -s 42 data_training.csv` - Train the neural network

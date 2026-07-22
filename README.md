@@ -170,7 +170,10 @@ Trains the multilayer perceptron model.
 uv run -m ft_mlp.train [OPTIONS] <dataset>
 ```
 
-**Required Arguments (mutually exclusive):**
+The only mandatory argument is the positional `<dataset>`. Everything below is
+optional and falls back to the documented default.
+
+**Topology (mutually exclusive, default: `--shape 24 24`):**
 - `--shape`: List of integers defining neurons per hidden layer
   - Example: `--shape 24 16` creates 2 hidden layers with 24 and 16 neurons
 - `--layer`: Accepts either form
@@ -180,15 +183,15 @@ uv run -m ft_mlp.train [OPTIONS] <dataset>
     3 hidden layers with 20 neurons each
 - `--conf`: Path to model configuration JSON file
 
-**Required Options:**
-- `--epoch`, `--epochs`, `-e`: Number of training iterations (must be > 0)
-- `--learning_rate`, `-a`: Learning rate (range: 0.0-1.0)
-- `--seed`, `-s`: Random seed for reproducibility (must be positive integer)
+**Hyperparameters:**
+- `--epoch`, `--epochs`, `-e`: Number of training iterations (must be > 0, default: 84)
+- `--learning_rate`, `-a`: Learning rate (range: 0.0-1.0, default: 0.1)
+- `--seed`, `-s`: Random seed for reproducibility (must be positive integer, default: 42)
 
 **Optional Arguments:**
 - `--features`: Subset of features to use (default: all 30 features)
 - `--loss`: Loss function (choices: 'categoricalCrossentropy', default: 'categoricalCrossentropy')
-- `--batch`, `--batch_size`, `-b`: Batch size for mini-batch gradient descent (default: full batch)
+- `--batch`, `--batch_size`, `-b`: Batch size for mini-batch gradient descent (default: 32)
   - If batch=1: stochastic gradient descent
   - If 1 < batch < dataset_size: mini-batch gradient descent
   - If batch >= dataset_size: batch gradient descent

@@ -24,7 +24,7 @@ def select_columns(df: pd.DataFrame, features: list) -> pd.DataFrame:
 
 def get_numerical_features(
         df: pd.DataFrame,
-        exclude: list = []
+        exclude: list | None = None
         ) -> list:
     """Get the numerical features name o from a dataframe.
 
@@ -35,6 +35,7 @@ def get_numerical_features(
     Returns:
       list: List of numerical features.
     """
+    exclude = exclude if exclude is not None else []
     columns = df.columns.tolist()
     filtered_features = []
     for col in columns:
@@ -129,7 +130,7 @@ def remove_nan(col: np.ndarray) -> np.ndarray:
 
 def replace_nan(
         df: pd.DataFrame,
-        columns: list = [],
+        columns: list | None = None,
         func=None
         ) -> pd.DataFrame:
     """Replace NaN values in a dataframe with the mean of the column
@@ -145,7 +146,7 @@ def replace_nan(
     """
     new_df = df.copy()
     f = func if func is not None else ft_mean
-    cols = columns if columns != [] else new_df.columns
+    cols = columns if columns else new_df.columns
     for column in cols:
         tmp_col = remove_nan(new_df[column].to_numpy())
         val = f(tmp_col)
@@ -153,7 +154,8 @@ def replace_nan(
     return new_df
 
 
-def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
+def remove_missing(df: pd.DataFrame,
+                   exclude: list[str] | None = None) -> pd.DataFrame:
     """Remove rows with missing values in the dataframe.
 
     Parameters:
@@ -163,6 +165,7 @@ def remove_missing(df: pd.DataFrame, exclude: list[str] = []) -> pd.DataFrame:
     Returns:
       pd.DataFrame: Dataframe without missing values.
     """
+    exclude = exclude if exclude is not None else []
     cleaned_df = df.copy()
     subset = [col for col in cleaned_df.columns if col not in exclude]
     cleaned_df.dropna(subset=subset, inplace=True)
@@ -211,7 +214,8 @@ def standardize_array(array: np.ndarray,
     return standardized
 
 
-def get_standardization_stats(df: pd.DataFrame, columns: list = []) -> dict:
+def get_standardization_stats(df: pd.DataFrame,
+                              columns: list | None = None) -> dict:
     """Compute the mean and standard deviation of the specified columns
 
     These statistics must be fitted on the training set only, then reused to
@@ -238,7 +242,7 @@ def get_standardization_stats(df: pd.DataFrame, columns: list = []) -> dict:
     return stats
 
 
-def standardize_df(df: pd.DataFrame, columns: list = [],
+def standardize_df(df: pd.DataFrame, columns: list | None = None,
                    stats: dict | None = None) -> pd.DataFrame:
     """Standardize the specified columns of a dataframe.
 

@@ -17,6 +17,9 @@ jobs:
     # Step 1: Check out the code from the repository
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # CI never pushes; do not leave GITHUB_TOKEN in .git/config
+        persist-credentials: false
 
     # Step 2: Install uv (also provides the requested Python)
     - name: Install uv

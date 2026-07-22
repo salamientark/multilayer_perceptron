@@ -212,8 +212,12 @@ def fill_model_datasets(
     model['output']['activation'] = softmax
     # Derived from the whole dataframe, before the split, so the order does
     # not depend on which rows land in the training set. Saved with the model
-    # and reused at prediction time.
-    model['classes'] = get_class_list(filtered_df, target)
+    # and reused at prediction time. With an explicit validation set the two
+    # frames come from different files, so both must be scanned or a class
+    # living only in the validation file would be missing from the list.
+    classes_source = (pd.concat([train_df, test_df]) if validation is not None
+                      else filtered_df)
+    model['classes'] = get_class_list(classes_source, target)
     model['output']['shape'] = len(model['classes'])
     model['features'] = features
     model['input']['shape'] = len(features)

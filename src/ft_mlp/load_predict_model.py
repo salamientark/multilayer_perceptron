@@ -26,7 +26,7 @@ def load_predict_model_weights(model: dict, weights):
 def load_predict_model_data(
         model: dict,
         dataset,
-        features: list = [],
+        features: list | None = None,
         target: str | None = None
         ) -> None:
     """Load dataset into model structure
@@ -64,7 +64,7 @@ def load_predict_model(
         model_filename: str,
         weights_filename: str,
         data_filename: str,
-        features: list = [],
+        features: list | None = None,
         target: str | None = None
         ) -> dict:
     """Load model, weights, and dataset for prediction

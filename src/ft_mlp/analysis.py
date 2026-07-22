@@ -4,6 +4,8 @@ from .ft_math import ft_mean, ft_std, ft_min, ft_max, ft_q1, ft_q2, ft_q3, \
                      ft_variance, ft_skew, ft_kurtosis
 from .preprocessing import get_numerical_features, remove_nan
 
+COLUMNS_PER_CHUNK = 4
+
 
 def print_describe_result(
         features: list,
@@ -35,88 +37,37 @@ def print_describe_result(
       skewness (list): List of skewnesses.
       kurtosis (list): List of kurtoses.
     """
-    i = 0
-    step = 4
-    while i < len(features):
+    rows = [
+        ('Count', counts),
+        ('Mean', means),
+        ('Std', stds),
+        ('Min', mins),
+        ('25%', q1s),
+        ('50%', q2s),
+        ('75%', q3s),
+        ('Max', maxs),
+        ('Variance', variances),
+        ('Skewness', skewness),
+        ('Kurtosis', kurtosis),
+        ]
+    # The table is printed in chunks of COLUMNS_PER_CHUNK features so that a
+    # 30-feature dataset stays readable on a terminal.
+    for start in range(0, len(features), COLUMNS_PER_CHUNK):
+        chunk = range(start, min(start + COLUMNS_PER_CHUNK, len(features)))
         print(f"{'':<12}", end="")
-        j = i
-        while j < step and j < len(features):
+        for j in chunk:
             print(f"{str(features[j])[:15]:>20}", end="")
-            j += 1
         print()
-        j = i
-        print(f"{'Count':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{counts[j]:>20.6f}", end="")
-            j += 1
+        for label, values in rows:
+            print(f"{label:<12}", end="")
+            for j in chunk:
+                print(f"{values[j]:>20.6f}", end="")
+            print()
         print()
-        j = i
-        print(f"{'Mean':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{means[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Std':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{stds[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Min':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{mins[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'25%':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{q1s[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'50%':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{q2s[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'75%':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{q3s[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Max':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{maxs[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Variance':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{variances[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Skewness':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{skewness[j]:>20.6f}", end="")
-            j += 1
-        print()
-        j = i
-        print(f"{'Kurtosis':<12}", end="")
-        while j < step and j < len(features):
-            print(f"{kurtosis[j]:>20.6f}", end="")
-            j += 1
-        print()
-        print()
-        i += 4
-        step += 4
     return
 
 
-def ft_describe(df: pd.DataFrame, exclude: list = []):
+def ft_describe(df: pd.DataFrame, exclude: list | None = None):
     """Describe the dataset given as parameter.
 
     Parameters:
